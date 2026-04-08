@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { resend } from "@/lib/resend";
+import { shippingNotificationEmail } from "@/lib/email-templates";
+
+const FROM_EMAIL = "orders@decorativefloorregisters.com";
 
 export async function GET(
   _request: NextRequest,
@@ -49,11 +53,57 @@ export async function PATCH(
     .from("orders")
     .update(updates)
     .eq("id", id)
-    .select()
+    .select("*, order_items(*)")
     .single();
 
   if (dbError) {
     return NextResponse.json({ error: dbError.message }, { status: 500 });
+  }
+
+  // Send shipping notification email when status changes to "shipped"
+  if (
+    body.status === "shipped" &&
+    data?.customer_email &&
+    data?.tracking_number
+  ) {
+    try {
+      const shippingAddress = (data.shipping_address as {
+        line1: string;
+        line2?: string;
+        city: string;
+        state: string;
+        zip: string;
+      }) || { line1: "", city: "", state: "", zip: "" };
+
+      const items = ((data.order_items as Array<{
+        product_name: string;
+        variant_desc: string;
+        quantity: number;
+        unit_price: number;
+        total_price: number;
+      }>) || []).map((item) => ({
+        product_name: item.product_name,
+        variant_desc: item.variant_desc,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        total_price: item.total_price,
+      }));
+
+      await resend.emails.send({
+        from: FROM_EMAIL,
+        to: data.customer_email,
+        subject: `Your Order Has Shipped - #${id.slice(0, 8).toUpperCase()}`,
+        html: shippingNotificationEmail({
+          orderId: id,
+          customerName: data.customer_name || "Customer",
+          trackingNumber: data.tracking_number,
+          items,
+          shippingAddress,
+        }),
+      });
+    } catch (emailErr) {
+      console.error("Error sending shipping notification email:", emailErr);
+    }
   }
 
   return NextResponse.json(data);

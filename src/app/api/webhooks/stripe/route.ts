@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resend } from "@/lib/resend";
+import { orderConfirmationEmail } from "@/lib/email-templates";
 import type Stripe from "stripe";
 
 const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET!;
@@ -251,49 +252,17 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       from: FROM_EMAIL,
       to: customerEmail,
       subject: `Order Confirmed - #${order.id.slice(0, 8).toUpperCase()}`,
-      html: `
-        <div style="font-family: Georgia, serif; max-width: 600px; margin: 0 auto; color: #3B2F2F;">
-          <h1 style="color: #3B2F2F; border-bottom: 2px solid #C9A96E; padding-bottom: 10px;">
-            Order Confirmed
-          </h1>
-          <p>Hi ${customerName},</p>
-          <p>Thank you for your order! We&rsquo;re preparing it for shipment.</p>
-
-          <h2 style="color: #3B2F2F; font-size: 18px; margin-top: 24px;">Order Details</h2>
-          <table style="width: 100%; border-collapse: collapse;">
-            <thead>
-              <tr style="background: #FAF7F2;">
-                <th style="padding: 8px; text-align: left;">Product</th>
-                <th style="padding: 8px; text-align: left;">Variant</th>
-                <th style="padding: 8px; text-align: center;">Qty</th>
-                <th style="padding: 8px; text-align: right;">Total</th>
-              </tr>
-            </thead>
-            <tbody>${itemsHtml}</tbody>
-          </table>
-
-          <div style="margin-top: 16px; text-align: right;">
-            <p style="margin: 4px 0;"><strong>Subtotal:</strong> $${subtotal.toFixed(2)}</p>
-            ${actualDiscount > 0 ? `<p style="margin: 4px 0; color: #16a34a;"><strong>Discount:</strong> -$${actualDiscount.toFixed(2)}</p>` : ""}
-            <p style="margin: 4px 0;"><strong>Shipping:</strong> ${shippingCost === 0 ? "Free" : `$${shippingCost.toFixed(2)}`}</p>
-            <p style="margin: 8px 0; font-size: 18px;"><strong>Total: $${total.toFixed(2)}</strong></p>
-          </div>
-
-          <div style="margin-top: 24px; padding: 16px; background: #FAF7F2; border-radius: 8px;">
-            <h3 style="margin: 0 0 8px; font-size: 14px; color: #6B5E5E;">Shipping To</h3>
-            <p style="margin: 0;">
-              ${customerName}<br>
-              ${shippingAddress.line1}<br>
-              ${shippingAddress.line2 ? shippingAddress.line2 + "<br>" : ""}
-              ${shippingAddress.city}, ${shippingAddress.state} ${shippingAddress.zip}
-            </p>
-          </div>
-
-          <p style="margin-top: 24px; color: #6B5E5E; font-size: 14px;">
-            You&rsquo;ll receive a shipping notification with tracking info once your order ships.
-          </p>
-        </div>
-      `,
+      html: orderConfirmationEmail({
+        orderId: order.id,
+        customerName,
+        items: orderItems,
+        subtotal,
+        discountAmount: actualDiscount,
+        discountCode,
+        shippingCost,
+        total,
+        shippingAddress,
+      }),
     });
   } catch (emailErr) {
     console.error("Error sending confirmation email:", emailErr);
