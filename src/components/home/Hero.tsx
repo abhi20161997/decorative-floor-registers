@@ -70,8 +70,8 @@ const itemVariants = {
 
 export default function Hero() {
   return (
-    <section className="relative min-h-[80vh] overflow-hidden bg-ivory">
-      <div className="mx-auto flex max-w-7xl flex-col items-center gap-12 px-6 py-16 md:flex-row md:gap-16 md:py-24 lg:px-8">
+    <section className="relative overflow-hidden bg-ivory">
+      <div className="mx-auto flex max-w-7xl flex-col items-center gap-8 px-6 py-12 md:flex-row md:gap-12 md:py-20 lg:px-8">
         {/* Left side: Content */}
         <motion.div
           className="flex flex-1 flex-col items-start"
@@ -80,36 +80,49 @@ export default function Hero() {
           animate="visible"
         >
           <motion.span
-            className="mb-4 text-label-sm uppercase text-antique-gold"
+            className="mb-3 text-label-sm uppercase tracking-widest text-antique-gold"
             variants={itemVariants}
           >
-            Handcrafted Excellence
+            Trusted by Homeowners Across America
           </motion.span>
 
           <motion.h1
-            className="mb-6 font-display text-display-xl text-espresso"
+            className="mb-4 font-display text-display-xl text-espresso"
             variants={itemVariants}
           >
-            Where{" "}
-            <span className="text-metallic">Artistry</span>{" "}
-            Meets Airflow
+            Premium Registers That{" "}
+            <span className="text-metallic">Transform</span>{" "}
+            Your Space
           </motion.h1>
 
           <motion.p
-            className="mb-8 max-w-[400px] text-lg leading-relaxed text-umber"
+            className="mb-4 max-w-[440px] text-lg leading-relaxed text-umber"
             variants={itemVariants}
           >
-            Premium decorative floor registers that transform every room.
-            Handcrafted in steel with three stunning metallic finishes,
-            our registers are where form meets function.
+            Handcrafted in heavy-gauge steel with three stunning metallic finishes.
+            Our decorative floor registers elevate every room where form meets function.
           </motion.p>
 
-          <motion.div variants={itemVariants}>
+          <motion.p
+            className="mb-6 flex items-center gap-1.5 text-sm text-umber/80"
+            variants={itemVariants}
+          >
+            <span className="text-antique-gold">&#9733;&#9733;&#9733;&#9733;&#9733;</span>
+            <span>Trusted by 500+ homeowners, contractors, and designers across the US</span>
+          </motion.p>
+
+          <motion.div className="flex flex-wrap items-center gap-4" variants={itemVariants}>
             <Link
               href="/shop"
               className="light-sweep inline-block rounded-sm bg-espresso px-8 py-3.5 text-label-md uppercase tracking-wider text-linen transition-shadow duration-300 hover:shadow-lg"
             >
-              Explore Collection &rarr;
+              Shop Collection
+            </Link>
+            <Link
+              href="/sizing-guide"
+              className="inline-block rounded-sm border-2 border-espresso px-8 py-3 text-label-md uppercase tracking-wider text-espresso transition-colors duration-300 hover:bg-espresso hover:text-linen"
+            >
+              View Sizing Guide
             </Link>
           </motion.div>
         </motion.div>

@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import * as dotenv from "dotenv";
 import * as path from "path";
+import * as fs from "fs";
 
 dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
 
@@ -129,6 +130,179 @@ function skuCode(styleName: string, finishName: string, sizeLabel: string): stri
   const f = finishName.replace(/\s+/g, "").slice(0, 2).toUpperCase();
   const sz = sizeLabel.toUpperCase();
   return `${s}-${f}-${sz}`;
+}
+
+// ---------- image directory mapping ----------
+
+const IMAGE_BASE_DIR = path.resolve(
+  process.cwd(),
+  "Compressed 40kb Images-decorative-floor-registers"
+);
+
+// Maps style slug -> image folder name
+const STYLE_DIR_MAP: Record<string, string> = {
+  "art-deco": "ART DECO",
+  contemporary: "CONTEMPORARY",
+  geometrical: "GEOMETRICAL",
+};
+
+// Maps finish slug -> image folder name
+const FINISH_DIR_MAP: Record<string, string> = {
+  "antique-brass": "AB",
+  black: "BLK",
+  bronze: "BN",
+};
+
+// Maps size label -> image folder name
+function sizeLabelToDir(label: string): string {
+  // "4x10" -> "4X10"
+  return label.toUpperCase().replace("x", "X");
+}
+
+// ---------- image upload ----------
+
+async function uploadProductImages(
+  productRows: { id: string; slug: string; name: string; style_id: string }[],
+  finishRows: { id: string; slug: string }[]
+): Promise<number> {
+  if (!fs.existsSync(IMAGE_BASE_DIR)) {
+    console.log(
+      `\n  Image directory not found at ${IMAGE_BASE_DIR} — skipping real image upload, using placeholders.`
+    );
+    return 0;
+  }
+
+  console.log(`\n  Found image directory: ${IMAGE_BASE_DIR}`);
+  let uploadedCount = 0;
+  let errorCount = 0;
+
+  const imageInserts: {
+    product_id: string;
+    finish_id: string;
+    url: string;
+    alt_text: string;
+    is_primary: boolean;
+    display_order: number;
+  }[] = [];
+
+  for (const product of productRows) {
+    const styleSlug =
+      PRODUCTS.find((p) => p.slug === product.slug)?.styleSlug ?? "";
+    const styleDirName = STYLE_DIR_MAP[styleSlug];
+    if (!styleDirName) continue;
+
+    for (const finish of finishRows) {
+      const finishDirName = FINISH_DIR_MAP[finish.slug];
+      if (!finishDirName) continue;
+
+      // Collect all images across all size subdirectories for this product+finish
+      const finishDir = path.join(IMAGE_BASE_DIR, styleDirName, finishDirName);
+      if (!fs.existsSync(finishDir)) {
+        console.log(`  Skipping missing dir: ${finishDir}`);
+        continue;
+      }
+
+      // Read size subdirectories
+      const sizeDirs = fs.readdirSync(finishDir, { withFileTypes: true });
+      let displayOrder = 0;
+
+      for (const sizeEntry of sizeDirs) {
+        if (!sizeEntry.isDirectory()) continue;
+
+        const sizePath = path.join(finishDir, sizeEntry.name);
+        const files = fs
+          .readdirSync(sizePath)
+          .filter((f) => f.toLowerCase().endsWith(".webp"))
+          .sort();
+
+        for (const filename of files) {
+          const filePath = path.join(sizePath, filename);
+          const fileBuffer = fs.readFileSync(filePath);
+
+          // Storage path: products/{style-slug}/{finish-slug}/{size}/{filename}
+          const storagePath = `products/${styleSlug}/${finish.slug}/${sizeEntry.name}/${filename}`;
+
+          const { error: uploadError } = await supabase.storage
+            .from("product-images")
+            .upload(storagePath, fileBuffer, {
+              contentType: "image/webp",
+              upsert: true,
+            });
+
+          if (uploadError) {
+            console.error(
+              `\n  Upload error for ${storagePath}: ${uploadError.message}`
+            );
+            errorCount++;
+            continue;
+          }
+
+          const {
+            data: { publicUrl },
+          } = supabase.storage
+            .from("product-images")
+            .getPublicUrl(storagePath);
+
+          const isPrimary = displayOrder === 0;
+
+          imageInserts.push({
+            product_id: product.id,
+            finish_id: finish.id,
+            url: publicUrl,
+            alt_text: `${product.name} in ${finish.slug.replace("-", " ")} finish - ${sizeEntry.name}`,
+            is_primary: isPrimary,
+            display_order: displayOrder,
+          });
+
+          uploadedCount++;
+          displayOrder++;
+
+          // Progress indicator
+          if (uploadedCount % 25 === 0) {
+            process.stdout.write(
+              `\r  Uploaded ${uploadedCount} images...`
+            );
+          }
+        }
+      }
+    }
+  }
+
+  console.log(`\r  Uploaded ${uploadedCount} images (${errorCount} errors)`);
+
+  // Insert image rows into database
+  if (imageInserts.length > 0) {
+    log("  Inserting image rows into database...");
+
+    // Delete existing product_images first to avoid conflicts
+    const productIds = [...new Set(imageInserts.map((i) => i.product_id))];
+    for (const pid of productIds) {
+      await supabase.from("product_images").delete().eq("product_id", pid);
+    }
+
+    // Insert in batches of 100 to avoid payload limits
+    const batchSize = 100;
+    let insertedCount = 0;
+
+    for (let i = 0; i < imageInserts.length; i += batchSize) {
+      const batch = imageInserts.slice(i, i + batchSize);
+      const { data, error: insertErr } = await supabase
+        .from("product_images")
+        .insert(batch)
+        .select("id");
+
+      if (insertErr) {
+        console.error(`\n  Batch insert error: ${insertErr.message}`);
+      } else {
+        insertedCount += data?.length ?? 0;
+      }
+    }
+
+    done(insertedCount);
+    return insertedCount;
+  }
+
+  return 0;
 }
 
 // ---------- content blocks ----------
@@ -425,24 +599,37 @@ async function seed() {
   done(variantRows?.length ?? 0);
   summary["variants"] = variantRows?.length ?? 0;
 
-  // 7. Product images (placeholder URLs)
+  // 7. Product images — try real images first, fall back to placeholders
   log("Seeding product images...");
-  const imageInserts: {
-    product_id: string;
-    finish_id: string;
-    url: string;
-    alt_text: string;
-    is_primary: boolean;
-    display_order: number;
-  }[] = [];
 
-  if (productRows && finishRows) {
+  let imageCount = 0;
+  const hasRealImages = fs.existsSync(IMAGE_BASE_DIR);
+
+  if (hasRealImages && productRows && finishRows) {
+    imageCount = await uploadProductImages(productRows, finishRows);
+  }
+
+  // Fallback to placeholder images if no real images were uploaded
+  if (imageCount === 0 && productRows && finishRows) {
+    console.log("  Using placeholder images...");
+    const imageInserts: {
+      product_id: string;
+      finish_id: string;
+      url: string;
+      alt_text: string;
+      is_primary: boolean;
+      display_order: number;
+    }[] = [];
+
     for (const product of productRows) {
       const styleName =
         PRODUCTS.find((p) => p.slug === product.slug)?.styleSlug ?? "style";
       for (const finish of finishRows) {
-        const hexBg = FINISHES.find((f) => f.slug === finish.slug)
-          ?.hex_color?.replace("#", "") ?? "c9a96e";
+        const hexBg =
+          FINISHES.find((f) => f.slug === finish.slug)?.hex_color?.replace(
+            "#",
+            ""
+          ) ?? "c9a96e";
         const textColor = finish.slug === "black" ? "ffffff" : "2c2420";
         const label = encodeURIComponent(
           `${styleName.replace("-", " ")} ${finish.slug.replace("-", " ")}`
@@ -457,37 +644,40 @@ async function seed() {
         });
       }
     }
-  }
 
-  // Use insert (not upsert) — delete existing first to avoid duplicates
-  // We'll try upsert on (product_id, finish_id, display_order) if available,
-  // otherwise just insert and ignore conflicts
-  const { data: imageRows, error: imagesErr } = await supabase
-    .from("product_images")
-    .upsert(imageInserts, {
-      onConflict: "product_id,finish_id,display_order",
-    })
-    .select("id");
-
-  if (imagesErr) {
-    // Fallback: just insert and skip if constraint doesn't match
-    console.error(
-      "\n  Upsert failed for images, trying plain insert:",
-      imagesErr.message
-    );
-    const { data: imgFallback, error: imgFallbackErr } = await supabase
+    const { data: imageRows, error: imagesErr } = await supabase
       .from("product_images")
-      .insert(imageInserts)
+      .upsert(imageInserts, {
+        onConflict: "product_id,finish_id,display_order",
+      })
       .select("id");
-    if (imgFallbackErr) {
-      console.error("  Image insert also failed:", imgFallbackErr.message);
+
+    if (imagesErr) {
+      console.error(
+        "\n  Upsert failed for images, trying plain insert:",
+        imagesErr.message
+      );
+      // Delete existing first, then insert
+      for (const product of productRows) {
+        await supabase
+          .from("product_images")
+          .delete()
+          .eq("product_id", product.id);
+      }
+      const { data: imgFallback, error: imgFallbackErr } = await supabase
+        .from("product_images")
+        .insert(imageInserts)
+        .select("id");
+      if (imgFallbackErr) {
+        console.error("  Image insert also failed:", imgFallbackErr.message);
+      }
+      imageCount = imgFallback?.length ?? 0;
+    } else {
+      imageCount = imageRows?.length ?? 0;
     }
-    done(imgFallback?.length ?? 0);
-    summary["product_images"] = imgFallback?.length ?? 0;
-  } else {
-    done(imageRows?.length ?? 0);
-    summary["product_images"] = imageRows?.length ?? 0;
+    done(imageCount);
   }
+  summary["product_images"] = imageCount;
 
   // 8. Content blocks
   log("Seeding content blocks...");

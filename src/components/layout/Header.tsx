@@ -54,9 +54,14 @@ export default function Header() {
             {/* Logo */}
             <Link
               href="/"
-              className="font-display text-2xl font-semibold tracking-tight text-espresso transition-colors hover:text-antique-gold"
+              className="flex flex-col leading-tight transition-colors hover:opacity-80"
             >
-              DFR
+              <span className="text-[10px] uppercase tracking-widest text-antique-gold font-display">
+                Decorative
+              </span>
+              <span className="font-display text-lg font-semibold text-espresso">
+                Floor Register
+              </span>
             </Link>
 
             {/* Desktop Navigation */}

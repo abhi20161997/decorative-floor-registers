@@ -51,8 +51,13 @@ export function AdminSidebar() {
     <aside className="fixed left-0 top-0 z-40 flex h-screen w-60 flex-col border-r border-linen bg-white">
       {/* Logo */}
       <div className="border-b border-linen px-6 py-5">
-        <Link href="/" className="font-display text-2xl text-espresso">
-          DFR
+        <Link href="/" className="flex flex-col leading-tight">
+          <span className="text-[10px] uppercase tracking-widest text-antique-gold font-display">
+            Decorative
+          </span>
+          <span className="font-display text-base font-semibold text-espresso">
+            Floor Register
+          </span>
         </Link>
         <p className="mt-1 text-label-sm uppercase tracking-wider text-umber">
           Admin Panel

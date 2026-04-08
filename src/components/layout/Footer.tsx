@@ -21,9 +21,14 @@ export default function Footer() {
         <div className="grid grid-cols-1 gap-10 md:grid-cols-2 lg:grid-cols-4">
           {/* Brand Column */}
           <div>
-            <h3 className="font-display text-2xl font-semibold text-warm-white">
-              DFR
-            </h3>
+            <div className="flex flex-col leading-tight">
+              <span className="text-[10px] uppercase tracking-widest text-antique-gold font-display">
+                Decorative
+              </span>
+              <span className="font-display text-lg font-semibold text-warm-white">
+                Floor Register
+              </span>
+            </div>
             <p className="mt-3 text-sm leading-relaxed text-warm-white/70">
               Handcrafted decorative floor registers bringing artistry and
               elegance to every room. Premium quality in Antique Brass, Black,

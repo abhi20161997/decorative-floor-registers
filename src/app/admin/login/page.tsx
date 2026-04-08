@@ -30,8 +30,15 @@ export default function AdminLoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-ivory">
       <div className="w-full max-w-md rounded-lg border border-linen bg-white p-8 shadow-sm">
         <div className="mb-8 text-center">
-          <h1 className="font-display text-display-md text-espresso">DFR</h1>
-          <p className="mt-1 text-sm text-umber">Admin Login</p>
+          <div className="flex flex-col items-center leading-tight">
+            <span className="text-xs uppercase tracking-widest text-antique-gold font-display">
+              Decorative
+            </span>
+            <h1 className="font-display text-2xl font-semibold text-espresso">
+              Floor Register
+            </h1>
+          </div>
+          <p className="mt-2 text-sm text-umber">Admin Login</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">

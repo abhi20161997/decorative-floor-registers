@@ -45,8 +45,20 @@ export default function MobileNav({ isOpen, onClose }: MobileNavProps) {
             transition={{ type: "spring", damping: 30, stiffness: 300 }}
             className="fixed top-0 right-0 bottom-0 z-50 flex w-80 flex-col bg-ivory shadow-xl"
           >
-            {/* Close button */}
-            <div className="flex justify-end p-4">
+            {/* Header with brand + close */}
+            <div className="flex items-center justify-between px-6 pt-5 pb-2">
+              <Link
+                href="/"
+                onClick={onClose}
+                className="flex flex-col leading-tight"
+              >
+                <span className="text-[10px] uppercase tracking-widest text-antique-gold font-display">
+                  Decorative
+                </span>
+                <span className="font-display text-lg font-semibold text-espresso">
+                  Floor Register
+                </span>
+              </Link>
               <button
                 onClick={onClose}
                 className="text-umber transition-colors hover:text-espresso"
