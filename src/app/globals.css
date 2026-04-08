@@ -1,0 +1,164 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Cormorant Garamond", serif;
+  --font-sans: "Inter", sans-serif;
+
+  /* Colors */
+  --color-ivory: #faf6f1;
+  --color-linen: #f0ebe4;
+  --color-espresso: #2c2420;
+  --color-umber: #6b5d52;
+  --color-antique-gold: #9a7b4f;
+  --color-brass: #c9a96e;
+  --color-warm-white: #f5efe8;
+
+  --color-finish-brass-light: #d4c5b0;
+  --color-finish-brass: #c9a96e;
+  --color-finish-brass-mid: #b8976a;
+  --color-finish-brass-bright: #d4b978;
+
+  --color-finish-black-light: #3a3632;
+  --color-finish-black: #2c2420;
+  --color-finish-black-dark: #1a1714;
+
+  --color-finish-bronze-light: #9a7b4f;
+  --color-finish-bronze: #8b6f3a;
+  --color-finish-bronze-dark: #6b5533;
+
+  /* Font sizes */
+  --text-display-xl: 3.5rem;
+  --text-display-xl--line-height: 1.1;
+  --text-display-xl--font-weight: 500;
+
+  --text-display-lg: 2.75rem;
+  --text-display-lg--line-height: 1.1;
+  --text-display-lg--font-weight: 500;
+
+  --text-display-md: 2.25rem;
+  --text-display-md--line-height: 1.15;
+  --text-display-md--font-weight: 500;
+
+  --text-label-sm: 0.6875rem;
+  --text-label-sm--line-height: 1;
+  --text-label-sm--font-weight: 500;
+  --text-label-sm--letter-spacing: 0.15em;
+
+  --text-label-md: 0.8125rem;
+  --text-label-md--line-height: 1;
+  --text-label-md--font-weight: 500;
+  --text-label-md--letter-spacing: 0.1em;
+
+  /* Animations */
+  --animate-shimmer: shimmer 4s linear infinite;
+  --animate-metallic-shift: metallic-shift 8s ease infinite;
+  --animate-light-reflect: light-reflect 6s ease infinite;
+  --animate-fade-slide-up: fade-slide-up 0.6s ease both;
+
+  @keyframes shimmer {
+    0% {
+      background-position: 0% center;
+    }
+    100% {
+      background-position: 200% center;
+    }
+  }
+
+  @keyframes metallic-shift {
+    0%, 100% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+  }
+
+  @keyframes light-reflect {
+    0%, 100% {
+      transform: translate(0, 0);
+      opacity: 0.6;
+    }
+    50% {
+      transform: translate(10%, 5%);
+      opacity: 0.3;
+    }
+  }
+
+  @keyframes fade-slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+@layer base {
+  body {
+    @apply bg-ivory text-espresso font-sans antialiased;
+    font-size: 16px;
+    line-height: 1.7;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-display;
+  }
+}
+
+/* Metallic gradient text utility */
+.text-metallic {
+  background: linear-gradient(
+    135deg,
+    #c9a96e 0%,
+    #e8d5a8 25%,
+    #9a7b4f 50%,
+    #d4b978 75%,
+    #c9a96e 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 4s linear infinite;
+}
+
+/* Brushed metal texture overlay */
+.texture-brushed-metal {
+  background-image: repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent 1px,
+    rgba(255, 255, 255, 0.03) 1px,
+    rgba(255, 255, 255, 0.03) 2px
+  );
+}
+
+/* Light sweep on hover */
+.light-sweep {
+  position: relative;
+  overflow: hidden;
+}
+.light-sweep::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.15),
+    transparent
+  );
+  transition: left 0.6s ease;
+}
+.light-sweep:hover::after {
+  left: 140%;
+}
