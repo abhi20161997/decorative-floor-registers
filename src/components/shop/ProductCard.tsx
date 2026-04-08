@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 
 type ProductCardProps = {
   product: {
@@ -53,12 +52,12 @@ export default function ProductCard({ product }: ProductCardProps) {
         style={{ background: primaryFinish?.gradient }}
       >
         {product.imageUrl ? (
-          <Image
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img
             src={product.imageUrl}
             alt={product.name}
-            fill
-            className="object-cover"
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            className="absolute inset-0 h-full w-full object-cover"
+            loading="lazy"
           />
         ) : (
           <RegisterGrid />

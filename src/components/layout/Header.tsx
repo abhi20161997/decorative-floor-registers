@@ -54,30 +54,31 @@ export default function Header() {
             {/* Logo */}
             <Link
               href="/"
-              className="flex flex-col leading-tight transition-colors hover:opacity-80"
+              className="group flex flex-col leading-none transition-opacity hover:opacity-80"
             >
-              <span className="text-xs uppercase tracking-[0.2em] text-antique-gold font-display">
+              <span className="text-[9px] font-medium uppercase tracking-[0.35em] text-brass">
                 Decorative
               </span>
-              <span className="font-display text-2xl font-semibold text-espresso -mt-0.5">
+              <span className="font-display text-[24px] font-semibold tracking-tight text-espresso italic -mt-0.5">
                 Floor Register
               </span>
             </Link>
 
             {/* Decorative separator */}
-            <div className="hidden md:block h-8 w-px bg-brass/20 mx-4" />
+            <div className="hidden md:block h-10 w-px bg-gradient-to-b from-transparent via-brass/30 to-transparent mx-6" />
 
             {/* Desktop Navigation */}
-            <nav className="hidden items-center gap-8 md:flex">
+            <nav className="hidden items-center gap-10 md:flex">
               {navLinks.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
+                  prefetch={true}
                   className={cn(
-                    "text-[13px] font-medium uppercase tracking-wide transition-colors",
+                    "relative text-[13px] tracking-[0.08em] uppercase transition-colors font-display font-medium",
                     pathname === link.href || pathname.startsWith(link.href + "/")
-                      ? "text-antique-gold"
-                      : "text-umber hover:text-espresso"
+                      ? "text-brass after:absolute after:-bottom-1 after:left-0 after:right-0 after:h-px after:bg-brass"
+                      : "text-umber/80 hover:text-espresso"
                   )}
                 >
                   {link.label}
