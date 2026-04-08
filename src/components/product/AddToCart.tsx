@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { useCartContext } from "@/context/CartContext";
 
 type CartVariant = {
   id: string;
@@ -17,6 +18,7 @@ type AddToCartProps = {
 };
 
 export default function AddToCart({ variant }: AddToCartProps) {
+  const { addItem } = useCartContext();
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
 
@@ -31,12 +33,20 @@ export default function AddToCart({ variant }: AddToCartProps) {
   const handleAddToCart = useCallback(() => {
     if (!variant) return;
 
-    // Log for now -- cart integration comes in Task 8
-    console.log("Add to cart:", { ...variant, quantity });
+    addItem({
+      variantId: variant.id,
+      productSlug: variant.productSlug,
+      productName: variant.productName,
+      finishName: variant.finishName,
+      sizeName: variant.sizeName,
+      price: variant.price,
+      quantity,
+      imageUrl: variant.imageUrl,
+    });
 
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
-  }, [variant, quantity]);
+  }, [variant, quantity, addItem]);
 
   const isDisabled = !variant;
 
