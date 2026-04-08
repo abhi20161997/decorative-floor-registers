@@ -29,6 +29,7 @@ type DemoRelated = {
   slug: string;
   styleName: string;
   basePrice: number;
+  imageUrl?: string;
   finishes: { name: string; hex: string; gradient: string }[];
 };
 
@@ -290,7 +291,8 @@ async function getRelatedProducts(
         styles:style_id (name),
         product_variants (
           finishes:finish_id (name, hex_color, gradient_css)
-        )
+        ),
+        product_images (image_url, is_primary, display_order)
       `
       )
       .eq("active", true)
@@ -305,6 +307,15 @@ async function getRelatedProducts(
     return products.map((p) => {
       const styleData = p.styles as any;
       const variants = (p.product_variants as any[]) || [];
+      const images = (p.product_images as any[]) || [];
+
+      const primaryImage =
+        images.find((img: { is_primary: boolean }) => img.is_primary) ||
+        images.sort(
+          (a: { display_order: number }, b: { display_order: number }) =>
+            a.display_order - b.display_order
+        )[0];
+
       const finishMap = new Map<
         string,
         { name: string; hex: string; gradient: string }
@@ -326,6 +337,7 @@ async function getRelatedProducts(
         slug: p.slug,
         styleName: styleData?.name || "Unknown",
         basePrice: p.base_price ?? 9.9,
+        imageUrl: primaryImage?.image_url || undefined,
         finishes: Array.from(finishMap.values()),
       };
     });

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 
 type ProductCardProps = {
   product: {
@@ -8,6 +9,7 @@ type ProductCardProps = {
     slug: string;
     styleName: string;
     basePrice: number;
+    imageUrl?: string;
     finishes: { name: string; hex: string; gradient: string }[];
   };
 };
@@ -50,14 +52,24 @@ export default function ProductCard({ product }: ProductCardProps) {
         className="light-sweep relative flex aspect-square items-center justify-center"
         style={{ background: primaryFinish?.gradient }}
       >
+        {product.imageUrl ? (
+          <Image
+            src={product.imageUrl}
+            alt={product.name}
+            fill
+            className="object-cover"
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          />
+        ) : (
+          <RegisterGrid />
+        )}
         {/* Finish dot top-right */}
         {primaryFinish && (
           <div
-            className="absolute right-3 top-3 h-5 w-5 rounded-full border border-white/20 shadow-sm"
+            className="absolute right-3 top-3 z-10 h-5 w-5 rounded-full border border-white/20 shadow-sm"
             style={{ background: primaryFinish.gradient }}
           />
         )}
-        <RegisterGrid />
       </div>
 
       {/* Product info */}

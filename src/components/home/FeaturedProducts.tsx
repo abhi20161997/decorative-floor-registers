@@ -1,7 +1,7 @@
-"use client";
-
 import Link from "next/link";
+import Image from "next/image";
 import ScrollReveal from "@/components/animations/ScrollReveal";
+import { createClient } from "@/lib/supabase/server";
 
 const FINISH_SWATCHES = [
   {
@@ -18,30 +18,33 @@ const FINISH_SWATCHES = [
   },
 ];
 
-const PRODUCTS = [
+const FALLBACK_PRODUCTS = [
   {
-    name: "Victorian Lattice Register",
+    name: "Art Deco Floor Register",
+    slug: "art-deco-floor-register",
     style: "Art Deco",
     price: "From $9.90",
-    finishIndex: 0,
+    imageUrl: undefined as string | undefined,
     imageGradient:
       "linear-gradient(145deg, #d4c5b0 0%, #c9a96e 40%, #d4b978 100%)",
     dotGradient: "linear-gradient(135deg, #d4c5b0, #c9a96e)",
   },
   {
-    name: "Horizon Line Register",
+    name: "Contemporary Floor Register",
+    slug: "contemporary-floor-register",
     style: "Contemporary",
     price: "From $9.90",
-    finishIndex: 1,
+    imageUrl: undefined as string | undefined,
     imageGradient:
       "linear-gradient(145deg, #3a3632 0%, #2c2420 40%, #1a1714 100%)",
     dotGradient: "linear-gradient(135deg, #3a3632, #2c2420)",
   },
   {
-    name: "Hex Mosaic Register",
+    name: "Geometrical Floor Register",
+    slug: "geometrical-floor-register",
     style: "Geometrical",
     price: "From $9.90",
-    finishIndex: 2,
+    imageUrl: undefined as string | undefined,
     imageGradient:
       "linear-gradient(145deg, #9a7b4f 0%, #8b6f3a 40%, #6b5533 100%)",
     dotGradient: "linear-gradient(135deg, #9a7b4f, #8b6f3a)",
@@ -73,7 +76,94 @@ function ProductRegister() {
   );
 }
 
-export default function FeaturedProducts() {
+type FeaturedProduct = {
+  name: string;
+  slug: string;
+  style: string;
+  price: string;
+  imageUrl?: string;
+  imageGradient: string;
+  dotGradient: string;
+};
+
+const FINISH_GRADIENTS: Record<string, { imageGradient: string; dotGradient: string }> = {
+  "Antique Brass": {
+    imageGradient: "linear-gradient(145deg, #d4c5b0 0%, #c9a96e 40%, #d4b978 100%)",
+    dotGradient: "linear-gradient(135deg, #d4c5b0, #c9a96e)",
+  },
+  "Black": {
+    imageGradient: "linear-gradient(145deg, #3a3632 0%, #2c2420 40%, #1a1714 100%)",
+    dotGradient: "linear-gradient(135deg, #3a3632, #2c2420)",
+  },
+  "Bronze": {
+    imageGradient: "linear-gradient(145deg, #9a7b4f 0%, #8b6f3a 40%, #6b5533 100%)",
+    dotGradient: "linear-gradient(135deg, #9a7b4f, #8b6f3a)",
+  },
+};
+
+async function getFeaturedProducts(): Promise<FeaturedProduct[]> {
+  try {
+    const supabase = await createClient();
+    const { data: products, error } = await supabase
+      .from("products")
+      .select(
+        `
+        name,
+        slug,
+        base_price,
+        styles:style_id (name),
+        product_variants (
+          finishes:finish_id (name)
+        ),
+        product_images (image_url, is_primary, display_order)
+      `
+      )
+      .eq("active", true)
+      .order("created_at", { ascending: false })
+      .limit(3);
+
+    if (error || !products || products.length === 0) {
+      return FALLBACK_PRODUCTS;
+    }
+
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    return products.map((p) => {
+      const styleData = p.styles as any;
+      const styleName = styleData?.name || "Unknown";
+      const variants = (p.product_variants as any[]) || [];
+      const images = (p.product_images as any[]) || [];
+
+      // Get primary image
+      const primaryImage =
+        images.find((img: { is_primary: boolean }) => img.is_primary) ||
+        images.sort(
+          (a: { display_order: number }, b: { display_order: number }) =>
+            a.display_order - b.display_order
+        )[0];
+
+      // Get first finish for gradient fallback
+      const firstFinish = variants[0]?.finishes?.name || "Antique Brass";
+      const gradients = FINISH_GRADIENTS[firstFinish] || FINISH_GRADIENTS["Antique Brass"];
+
+      return {
+        name: p.name,
+        slug: p.slug,
+        style: styleName,
+        price: `From $${(p.base_price ?? 9.9).toFixed(2)}`,
+        imageUrl: primaryImage?.image_url || undefined,
+        imageGradient: gradients.imageGradient,
+        dotGradient: gradients.dotGradient,
+      };
+    });
+    /* eslint-enable @typescript-eslint/no-explicit-any */
+  } catch {
+    return FALLBACK_PRODUCTS;
+  }
+}
+
+export default async function FeaturedProducts() {
+  const products = await getFeaturedProducts();
+
   return (
     <section className="bg-linen px-6 py-20 lg:px-8">
       <div className="mx-auto max-w-7xl">
@@ -89,10 +179,10 @@ export default function FeaturedProducts() {
         </ScrollReveal>
 
         <div className="grid gap-8 md:grid-cols-3">
-          {PRODUCTS.map((product, index) => (
+          {products.map((product, index) => (
             <ScrollReveal key={product.name} delay={index * 0.15}>
               <Link
-                href="/shop"
+                href={`/shop/${product.slug}`}
                 className="group block overflow-hidden rounded-xl bg-warm-white shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
               >
                 {/* Image area */}
@@ -100,13 +190,22 @@ export default function FeaturedProducts() {
                   className="light-sweep relative flex h-56 items-center justify-center"
                   style={{ background: product.imageGradient }}
                 >
+                  {product.imageUrl ? (
+                    <Image
+                      src={product.imageUrl}
+                      alt={product.name}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 768px) 100vw, 33vw"
+                    />
+                  ) : (
+                    <ProductRegister />
+                  )}
                   {/* Metallic finish dot */}
                   <div
-                    className="absolute right-3 top-3 h-5 w-5 rounded-full border border-white/20 shadow-sm"
+                    className="absolute right-3 top-3 z-10 h-5 w-5 rounded-full border border-white/20 shadow-sm"
                     style={{ background: product.dotGradient }}
                   />
-
-                  <ProductRegister />
                 </div>
 
                 {/* Product info */}

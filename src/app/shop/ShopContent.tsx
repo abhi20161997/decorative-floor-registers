@@ -13,6 +13,7 @@ type ShopProduct = {
   slug: string;
   styleName: string;
   basePrice: number;
+  imageUrl?: string;
   finishes: { name: string; hex: string; gradient: string }[];
 };
 

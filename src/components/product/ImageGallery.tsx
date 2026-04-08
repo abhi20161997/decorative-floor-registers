@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
+import Image from "next/image";
 
 type GalleryImage = {
   url: string;
@@ -94,11 +95,13 @@ export default function ImageGallery({
           }}
         >
           {hasRealImages ? (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img
+            <Image
               src={displayImages[activeIndex].url}
               alt={displayImages[activeIndex].alt}
-              className="h-full w-full object-cover"
+              fill
+              className="object-cover"
+              sizes="(max-width: 1024px) 100vw, 50vw"
+              priority={activeIndex === 0}
             />
           ) : (
             <div className="flex flex-col items-center gap-4">
@@ -141,11 +144,12 @@ export default function ImageGallery({
                 }}
               >
                 {hasRealImages ? (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img
+                  <Image
                     src={img.url}
                     alt={img.alt}
-                    className="h-full w-full object-cover"
+                    fill
+                    className="object-cover"
+                    sizes="80px"
                   />
                 ) : (
                   <div className="mx-auto w-8">

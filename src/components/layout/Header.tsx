@@ -45,24 +45,27 @@ export default function Header() {
         className={cn(
           "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
           scrolled
-            ? "bg-ivory/95 backdrop-blur-md shadow-sm"
+            ? "bg-ivory/95 backdrop-blur-md shadow-sm border-b border-brass/10"
             : "bg-transparent"
         )}
       >
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex h-16 items-center justify-between">
+          <div className="flex h-20 items-center justify-between">
             {/* Logo */}
             <Link
               href="/"
               className="flex flex-col leading-tight transition-colors hover:opacity-80"
             >
-              <span className="text-[10px] uppercase tracking-widest text-antique-gold font-display">
+              <span className="text-xs uppercase tracking-[0.2em] text-antique-gold font-display">
                 Decorative
               </span>
-              <span className="font-display text-lg font-semibold text-espresso">
+              <span className="font-display text-2xl font-semibold text-espresso -mt-0.5">
                 Floor Register
               </span>
             </Link>
+
+            {/* Decorative separator */}
+            <div className="hidden md:block h-8 w-px bg-brass/20 mx-4" />
 
             {/* Desktop Navigation */}
             <nav className="hidden items-center gap-8 md:flex">
@@ -71,7 +74,7 @@ export default function Header() {
                   key={link.href}
                   href={link.href}
                   className={cn(
-                    "text-label-sm uppercase transition-colors",
+                    "text-[13px] font-medium uppercase tracking-wide transition-colors",
                     pathname === link.href || pathname.startsWith(link.href + "/")
                       ? "text-antique-gold"
                       : "text-umber hover:text-espresso"
@@ -147,7 +150,7 @@ export default function Header() {
       </header>
 
       {/* Spacer to prevent content from going under the fixed header */}
-      <div className="h-16" />
+      <div className="h-20" />
 
       {/* Mobile Navigation Drawer */}
       <MobileNav

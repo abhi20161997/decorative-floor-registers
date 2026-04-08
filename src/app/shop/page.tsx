@@ -15,6 +15,7 @@ const demoProducts = [
     slug: "art-deco-floor-register",
     styleName: "Art Deco",
     basePrice: 9.9,
+    imageUrl: undefined as string | undefined,
     finishes: [
       {
         name: "Antique Brass",
@@ -95,6 +96,7 @@ type ShopProduct = {
   slug: string;
   styleName: string;
   basePrice: number;
+  imageUrl?: string;
   finishes: { name: string; hex: string; gradient: string }[];
 };
 
@@ -111,7 +113,8 @@ async function getProducts(): Promise<ShopProduct[]> {
         styles:style_id (name),
         product_variants (
           finishes:finish_id (name, hex_color, gradient_css)
-        )
+        ),
+        product_images (image_url, is_primary, display_order)
       `
       )
       .eq("active", true)
@@ -127,6 +130,16 @@ async function getProducts(): Promise<ShopProduct[]> {
       const styleData = p.styles as any;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const variants = (p.product_variants as any[]) || [];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const images = (p.product_images as any[]) || [];
+
+      // Find the primary image, or fall back to first image by display_order
+      const primaryImage =
+        images.find((img: { is_primary: boolean }) => img.is_primary) ||
+        images.sort(
+          (a: { display_order: number }, b: { display_order: number }) =>
+            a.display_order - b.display_order
+        )[0];
 
       // Deduplicate finishes from variants
       const finishMap = new Map<
@@ -151,6 +164,7 @@ async function getProducts(): Promise<ShopProduct[]> {
         slug: p.slug,
         styleName: styleData?.name || "Unknown",
         basePrice: p.base_price ?? 9.9,
+        imageUrl: primaryImage?.image_url || undefined,
         finishes: Array.from(finishMap.values()),
       };
     });
