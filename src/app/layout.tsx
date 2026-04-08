@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Cormorant_Garamond, Inter } from "next/font/google";
+import Header from "@/components/layout/Header";
+import Footer from "@/components/layout/Footer";
 import "./globals.css";
 
 const inter = Inter({
@@ -14,9 +16,16 @@ const cormorant = Cormorant_Garamond({
 });
 
 export const metadata: Metadata = {
-  title: "Decorative Floor Register | Premium Floor Registers & Grilles",
+  title: {
+    default: "Decorative Floor Register | Premium Floor Registers & Grilles",
+    template: "%s | Decorative Floor Register",
+  },
   description:
     "Handcrafted decorative floor registers in Art Deco, Contemporary, and Geometrical designs. Available in Antique Brass, Black, and Bronze finishes.",
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ||
+      "https://decorativefloorregister.com"
+  ),
 };
 
 export default function RootLayout({
@@ -26,7 +35,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${inter.variable} ${cormorant.variable}`}>
-      <body>{children}</body>
+      <body className="flex min-h-screen flex-col">
+        <Header />
+        <main className="flex-1">{children}</main>
+        <Footer />
+      </body>
     </html>
   );
 }
