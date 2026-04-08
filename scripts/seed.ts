@@ -61,35 +61,35 @@ const FINISHES = [
     name: "Antique Brass",
     slug: "antique-brass",
     hex_color: "#c9a96e",
-    gradient:
+    gradient_css:
       "linear-gradient(135deg, #d4c5b0, #c9a96e, #b8976a, #d4b978)",
   },
   {
     name: "Black",
     slug: "black",
     hex_color: "#2c2420",
-    gradient:
+    gradient_css:
       "linear-gradient(135deg, #3a3632, #2c2420, #1a1714, #3a3632)",
   },
   {
     name: "Bronze",
     slug: "bronze",
     hex_color: "#8b6f3a",
-    gradient:
+    gradient_css:
       "linear-gradient(135deg, #8b6f3a, #6b5533, #9a7b4f, #8b6f3a)",
   },
 ];
 
 const SIZES = [
-  { label: "2x10", width: 2, height: 10 },
-  { label: "2x12", width: 2, height: 12 },
-  { label: "2x14", width: 2, height: 14 },
-  { label: "4x10", width: 4, height: 10 },
-  { label: "4x12", width: 4, height: 12 },
-  { label: "4x14", width: 4, height: 14 },
-  { label: "6x10", width: 6, height: 10 },
-  { label: "6x12", width: 6, height: 12 },
-  { label: "6x14", width: 6, height: 14 },
+  { label: "2x10", width_inches: 2, height_inches: 10 },
+  { label: "2x12", width_inches: 2, height_inches: 12 },
+  { label: "2x14", width_inches: 2, height_inches: 14 },
+  { label: "4x10", width_inches: 4, height_inches: 10 },
+  { label: "4x12", width_inches: 4, height_inches: 12 },
+  { label: "4x14", width_inches: 4, height_inches: 14 },
+  { label: "6x10", width_inches: 6, height_inches: 10 },
+  { label: "6x12", width_inches: 6, height_inches: 12 },
+  { label: "6x14", width_inches: 6, height_inches: 14 },
 ];
 
 const PRODUCTS = [
@@ -179,7 +179,7 @@ async function uploadProductImages(
   const imageInserts: {
     product_id: string;
     finish_id: string;
-    url: string;
+    image_url: string;
     alt_text: string;
     is_primary: boolean;
     display_order: number;
@@ -248,7 +248,7 @@ async function uploadProductImages(
           imageInserts.push({
             product_id: product.id,
             finish_id: finish.id,
-            url: publicUrl,
+            image_url: publicUrl,
             alt_text: `${product.name} in ${finish.slug.replace("-", " ")} finish - ${sizeEntry.name}`,
             is_primary: isPrimary,
             display_order: displayOrder,
@@ -522,7 +522,7 @@ async function seed() {
   const { data: sizeRows, error: sizesErr } = await supabase
     .from("sizes")
     .upsert(SIZES, { onConflict: "label" })
-    .select("id, label, width");
+    .select("id, label, width_inches");
 
   if (sizesErr) {
     console.error("\n  Error seeding sizes:", sizesErr.message);
@@ -579,7 +579,7 @@ async function seed() {
             finish_id: finish.id,
             size_id: size.id,
             sku: skuCode(styleName, finish.slug, size.label),
-            price: priceForWidth(size.width),
+            price: priceForWidth(size.width_inches),
             stock_qty: 100,
             active: true,
           });
@@ -615,7 +615,7 @@ async function seed() {
     const imageInserts: {
       product_id: string;
       finish_id: string;
-      url: string;
+      image_url: string;
       alt_text: string;
       is_primary: boolean;
       display_order: number;
@@ -637,7 +637,7 @@ async function seed() {
         imageInserts.push({
           product_id: product.id,
           finish_id: finish.id,
-          url: `https://placehold.co/600x400/${hexBg}/${textColor}?text=${label}`,
+          image_url: `https://placehold.co/600x400/${hexBg}/${textColor}?text=${label}`,
           alt_text: `${product.name} in ${finish.slug.replace("-", " ")} finish`,
           is_primary: true,
           display_order: 0,
@@ -697,7 +697,7 @@ async function seed() {
   const { data: settingsRows, error: settingsErr } = await supabase
     .from("site_settings")
     .upsert(SITE_SETTINGS, { onConflict: "key" })
-    .select("id");
+    .select("key");
 
   if (settingsErr) {
     console.error("\n  Error seeding site settings:", settingsErr.message);
