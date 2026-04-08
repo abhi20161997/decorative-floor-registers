@@ -8,21 +8,56 @@ const FREE_SHIPPING_THRESHOLD = 50;
 const SHIPPING_COST = 5.99;
 
 export default function CartSummary() {
-  const { subtotal } = useCartContext();
+  const { items, subtotal } = useCartContext();
   const [discountCode, setDiscountCode] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const shippingCost = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_COST;
   const total = subtotal + shippingCost;
 
   const handleApplyDiscount = () => {
-    // Discount code validation will be added with backend integration
+    // Discount code is passed along at checkout time
     if (discountCode.trim()) {
-      alert("Discount codes coming soon!");
+      setError(null);
     }
   };
 
-  const handleCheckout = () => {
-    alert("Checkout coming soon");
+  const handleCheckout = async () => {
+    if (items.length === 0) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items: items.map((item) => ({
+            variantId: item.variantId,
+            quantity: item.quantity,
+          })),
+          discountCode: discountCode.trim() || undefined,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Something went wrong. Please try again.");
+        return;
+      }
+
+      if (data.url) {
+        // Stripe requires full page redirect
+        window.location.href = data.url;
+      }
+    } catch {
+      setError("Unable to connect to checkout. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -94,12 +129,18 @@ export default function CartSummary() {
         </div>
       </div>
 
+      {/* Error message */}
+      {error && (
+        <p className="mt-3 text-center text-sm text-red-600">{error}</p>
+      )}
+
       {/* Checkout button */}
       <button
         onClick={handleCheckout}
-        className="light-sweep mt-5 w-full rounded-lg bg-espresso py-4 text-sm font-semibold uppercase tracking-wider text-ivory transition-all duration-300 hover:shadow-lg active:scale-[0.98]"
+        disabled={loading || items.length === 0}
+        className="light-sweep mt-5 w-full rounded-lg bg-espresso py-4 text-sm font-semibold uppercase tracking-wider text-ivory transition-all duration-300 hover:shadow-lg active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
       >
-        Proceed to Checkout
+        {loading ? "Redirecting..." : "Proceed to Checkout"}
       </button>
     </div>
   );
