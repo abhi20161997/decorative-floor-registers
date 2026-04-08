@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import ProductDetail from "./ProductDetail";
 import RelatedProducts from "@/components/product/RelatedProducts";
+import ProductJsonLd from "@/components/product/ProductJsonLd";
 
 export const revalidate = 3600; // ISR: revalidate every hour
 
@@ -368,9 +369,25 @@ export async function generateMetadata({
     return { title: "Product Not Found" };
   }
 
+  const baseUrl =
+    process.env.NEXT_PUBLIC_SITE_URL || "https://decorativefloorregister.com";
+  const prices = product.sizes.map((s) => s.price);
+  const minPrice = Math.min(...prices);
+  const maxPrice = Math.max(...prices);
+  const finishNames = product.finishes.map((f) => f.name).join(", ");
+
   return {
-    title: `${product.name} | Decorative Floor Registers`,
-    description: product.description,
+    title: `${product.name}`,
+    description: `${product.name} in ${finishNames}. From $${minPrice.toFixed(2)}. ${product.description}`,
+    openGraph: {
+      title: `${product.name} | Decorative Floor Register`,
+      description: product.description,
+      url: `${baseUrl}/shop/${product.slug}`,
+      type: "website",
+    },
+    alternates: {
+      canonical: `${baseUrl}/shop/${product.slug}`,
+    },
   };
 }
 
@@ -393,8 +410,21 @@ export default async function ProductPage({
       ? product.relatedProducts
       : await getRelatedProducts(slug);
 
+  const prices = product.sizes.map((s) => s.price);
+  const hasStock = product.sizes.some((s) => s.inStock);
+
   return (
     <main className="bg-ivory">
+      <ProductJsonLd
+        name={product.name}
+        description={product.description}
+        slug={product.slug}
+        priceRange={{ min: Math.min(...prices), max: Math.max(...prices) }}
+        finishes={product.finishes.map((f) => f.name)}
+        sizes={product.sizes.map((s) => s.label)}
+        inStock={hasStock}
+      />
+
       {/* Breadcrumb */}
       <div className="border-b border-linen bg-warm-white px-6 py-4 lg:px-8">
         <div className="mx-auto max-w-7xl">
