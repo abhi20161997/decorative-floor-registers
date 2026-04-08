@@ -27,6 +27,14 @@ export const metadata: Metadata = {
     process.env.NEXT_PUBLIC_SITE_URL ||
       "https://decorativefloorregister.com"
   ),
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    siteName: "Decorative Floor Register",
+  },
+  twitter: {
+    card: "summary_large_image",
+  },
 };
 
 export default function RootLayout({
