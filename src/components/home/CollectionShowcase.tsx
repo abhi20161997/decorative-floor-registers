@@ -4,32 +4,28 @@ import Link from "next/link";
 import ScrollReveal from "@/components/animations/ScrollReveal";
 import { getProductImageUrl } from "@/lib/image-urls";
 
+// Use antique-brass finish for all - guaranteed to work. Each style has different patterns.
 const COLLECTIONS = [
   {
     name: "Art Deco",
     slug: "art-deco",
-    gradient:
-      "linear-gradient(145deg, #d4c5b0 0%, #c9a96e 50%, #d4b978 100%)",
-    description: "Elegant 1920s-inspired patterns with bold geometric lines",
+    description: "Elegant 1920s-inspired geometric patterns",
     imageUrl: getProductImageUrl("Art Deco", "Antique Brass"),
+    accentColor: "#c9a96e",
   },
   {
     name: "Contemporary",
     slug: "contemporary",
-    gradient:
-      "linear-gradient(145deg, #3a3632 0%, #2c2420 50%, #1a1714 100%)",
-    textColor: "text-linen",
-    description: "Clean, minimal designs for modern interiors",
-    imageUrl: getProductImageUrl("Contemporary", "Black"),
+    description: "Clean, minimal designs for modern homes",
+    imageUrl: getProductImageUrl("Contemporary", "Antique Brass"),
+    accentColor: "#9a7b4f",
   },
   {
     name: "Geometrical",
     slug: "geometrical",
-    gradient:
-      "linear-gradient(145deg, #9a7b4f 0%, #8b6f3a 50%, #6b5533 100%)",
-    textColor: "text-linen",
-    description: "Precise repeating patterns with mathematical harmony",
-    imageUrl: getProductImageUrl("Geometrical", "Bronze"),
+    description: "Bold repeating shapes with precision",
+    imageUrl: getProductImageUrl("Geometrical", "Antique Brass"),
+    accentColor: "#8b6f3a",
   },
 ];
 
@@ -48,47 +44,38 @@ export default function CollectionShowcase() {
           </div>
         </ScrollReveal>
 
-        <div className="grid gap-6 md:grid-cols-3">
+        <div className="grid gap-8 md:grid-cols-3">
           {COLLECTIONS.map((collection, index) => (
             <ScrollReveal key={collection.slug} delay={index * 0.15}>
               <Link
                 href={`/shop?style=${collection.slug}`}
-                className="group block overflow-hidden rounded-xl shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
+                className="group block overflow-hidden rounded-2xl bg-white shadow-sm transition-all duration-300 hover:-translate-y-2 hover:shadow-xl"
               >
-                <div
-                  className="relative flex h-72 flex-col items-center justify-center p-8"
-                  style={{ background: collection.gradient }}
-                >
-                  {/* Real product image */}
+                {/* Product image */}
+                <div className="relative aspect-[4/3] overflow-hidden bg-linen">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={collection.imageUrl}
                     alt={`${collection.name} floor register`}
-                    className="absolute inset-0 h-full w-full object-cover"
+                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                     loading="lazy"
                   />
+                </div>
 
-                  {/* Gradient overlay for text readability */}
-                  <div
-                    className="absolute inset-0"
-                    style={{
-                      background:
-                        "linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.55) 100%)",
-                    }}
-                  />
-
-                  <div className="relative z-10 flex flex-col items-center">
-                    <h3
-                      className="mt-6 font-display text-3xl font-medium text-white drop-shadow-md"
-                    >
-                      {collection.name}
-                    </h3>
-                    <span
-                      className="mt-3 text-sm tracking-wide text-white/80 transition-opacity duration-300 group-hover:text-white"
-                    >
-                      Explore Collection &rarr;
-                    </span>
-                  </div>
+                {/* Text below image */}
+                <div className="p-6 text-center">
+                  <h3 className="font-display text-2xl font-medium text-espresso">
+                    {collection.name}
+                  </h3>
+                  <p className="mt-1.5 text-sm text-umber">
+                    {collection.description}
+                  </p>
+                  <span
+                    className="mt-4 inline-block text-label-sm uppercase tracking-wide transition-colors"
+                    style={{ color: collection.accentColor }}
+                  >
+                    Explore Collection &rarr;
+                  </span>
                 </div>
               </Link>
             </ScrollReveal>
