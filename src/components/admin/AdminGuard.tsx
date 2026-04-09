@@ -1,18 +1,27 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useAdmin } from "@/hooks/useAdmin";
 
 export function AdminGuard({ children }: { children: React.ReactNode }) {
   const { user, isAdmin, loading } = useAdmin();
   const router = useRouter();
+  const pathname = usePathname();
+
+  // Skip auth guard on the login page itself
+  const isLoginPage = pathname === "/admin/login";
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!loading && !user && !isLoginPage) {
       router.push("/admin/login");
     }
-  }, [loading, user, router]);
+  }, [loading, user, router, isLoginPage]);
+
+  // Always render login page without auth check
+  if (isLoginPage) {
+    return <>{children}</>;
+  }
 
   if (loading) {
     return (
