@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import { createClient } from "@/lib/supabase/server";
+import { createStaticClient } from "@/lib/supabase/static";
 import { getProductImageUrl } from "@/lib/image-urls";
 import ShopContent from "./ShopContent";
 
@@ -108,7 +108,7 @@ type ShopProduct = {
 
 async function getProducts(): Promise<ShopProduct[]> {
   try {
-    const supabase = await createClient();
+    const supabase = createStaticClient();
     const { data: products, error } = await supabase
       .from("products")
       .select(

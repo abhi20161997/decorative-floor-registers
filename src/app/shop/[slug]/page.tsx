@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createStaticClient } from "@/lib/supabase/static";
 import { getProductGalleryUrls } from "@/lib/image-urls";
 import ProductDetail from "./ProductDetail";
 import RelatedProducts from "@/components/product/RelatedProducts";
@@ -174,7 +174,7 @@ const demoSlugs = Object.keys(demoProducts);
 
 async function getProduct(slug: string): Promise<DemoProduct | null> {
   try {
-    const supabase = await createClient();
+    const supabase = createStaticClient();
     const { data: product, error } = await supabase
       .from("products")
       .select(
@@ -284,7 +284,7 @@ async function getRelatedProducts(
   if (demo) return demo.relatedProducts;
 
   try {
-    const supabase = await createClient();
+    const supabase = createStaticClient();
     const { data: products, error } = await supabase
       .from("products")
       .select(
@@ -355,7 +355,7 @@ async function getRelatedProducts(
 
 export async function generateStaticParams() {
   try {
-    const supabase = await createClient();
+    const supabase = createStaticClient();
     const { data: products } = await supabase
       .from("products")
       .select("slug")

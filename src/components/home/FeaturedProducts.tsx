@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import ScrollReveal from "@/components/animations/ScrollReveal";
-import { createClient } from "@/lib/supabase/server";
+import { createStaticClient } from "@/lib/supabase/static";
 
 const FINISH_SWATCHES = [
   {
@@ -103,7 +103,7 @@ const FINISH_GRADIENTS: Record<string, { imageGradient: string; dotGradient: str
 
 async function getFeaturedProducts(): Promise<FeaturedProduct[]> {
   try {
-    const supabase = await createClient();
+    const supabase = createStaticClient();
     const { data: products, error } = await supabase
       .from("products")
       .select(

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import ScrollReveal from "@/components/animations/ScrollReveal";
-import { createClient } from "@/lib/supabase/server";
+import { createStaticClient } from "@/lib/supabase/static";
 
 export const revalidate = 3600;
 
@@ -26,7 +26,7 @@ type ContentBlock = {
 
 async function getAboutContent(): Promise<ContentBlock[] | null> {
   try {
-    const supabase = await createClient();
+    const supabase = createStaticClient();
     const { data, error } = await supabase
       .from("content_blocks")
       .select("id, title, body, section_key")
