@@ -4,6 +4,9 @@ import { createClient } from "@/lib/supabase/server";
 import { getProductImageUrl } from "@/lib/image-urls";
 import ShopContent from "./ShopContent";
 
+// ISR: cache for 60s so pages are served from CDN, not fresh SSR every request
+export const revalidate = 60;
+
 export const metadata: Metadata = {
   title: "Shop All Registers | Decorative Floor Registers",
   description:
