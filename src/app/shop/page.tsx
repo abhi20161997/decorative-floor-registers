@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { getProductImageUrl } from "@/lib/image-urls";
 import ShopContent from "./ShopContent";
 
 export const metadata: Metadata = {
@@ -15,7 +16,7 @@ const demoProducts = [
     slug: "art-deco-floor-register",
     styleName: "Art Deco",
     basePrice: 9.9,
-    imageUrl: undefined as string | undefined,
+    imageUrl: getProductImageUrl("Art Deco", "Antique Brass"),
     finishes: [
       {
         name: "Antique Brass",
@@ -42,6 +43,7 @@ const demoProducts = [
     slug: "contemporary-floor-register",
     styleName: "Contemporary",
     basePrice: 9.9,
+    imageUrl: getProductImageUrl("Contemporary", "Antique Brass"),
     finishes: [
       {
         name: "Antique Brass",
@@ -68,6 +70,7 @@ const demoProducts = [
     slug: "geometrical-floor-register",
     styleName: "Geometrical",
     basePrice: 9.9,
+    imageUrl: getProductImageUrl("Geometrical", "Antique Brass"),
     finishes: [
       {
         name: "Antique Brass",
@@ -164,7 +167,7 @@ async function getProducts(): Promise<ShopProduct[]> {
         slug: p.slug,
         styleName: styleData?.name || "Unknown",
         basePrice: p.base_price ?? 9.9,
-        imageUrl: primaryImage?.image_url || undefined,
+        imageUrl: primaryImage?.image_url || getProductImageUrl(styleData?.name || "Art Deco", Array.from(finishMap.values())[0]?.name || "Antique Brass"),
         finishes: Array.from(finishMap.values()),
       };
     });

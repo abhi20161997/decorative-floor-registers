@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getProductGalleryUrls } from "@/lib/image-urls";
 import ProductDetail from "./ProductDetail";
 import RelatedProducts from "@/components/product/RelatedProducts";
 import ProductJsonLd from "@/components/product/ProductJsonLd";
@@ -95,7 +96,7 @@ const demoProducts: Record<string, DemoProduct> = {
       "Transform your living space with our Art Deco floor register, featuring geometric patterns inspired by the glamour of the 1920s. Precision-engineered from heavy-gauge steel with individually welded diffusion vanes.",
     finishes: sharedFinishes,
     sizes: sharedSizes,
-    images: [],
+    images: getProductGalleryUrls("Art Deco", "Antique Brass"),
     relatedProducts: [
       {
         name: "Contemporary Floor Register",
@@ -121,7 +122,7 @@ const demoProducts: Record<string, DemoProduct> = {
       "Clean lines and modern elegance define our Contemporary floor register. Designed for today\u2019s interiors, with precision-cut patterns and a sleek profile that complements any room.",
     finishes: sharedFinishes,
     sizes: sharedSizes,
-    images: [],
+    images: getProductGalleryUrls("Contemporary", "Antique Brass"),
     relatedProducts: [
       {
         name: "Art Deco Floor Register",
@@ -147,7 +148,7 @@ const demoProducts: Record<string, DemoProduct> = {
       "Bold geometric motifs make a statement with our Geometrical floor register. Each piece is crafted from heavy-gauge steel with intricate angular patterns that double as functional art.",
     finishes: sharedFinishes,
     sizes: sharedSizes,
-    images: [],
+    images: getProductGalleryUrls("Geometrical", "Antique Brass"),
     relatedProducts: [
       {
         name: "Art Deco Floor Register",
@@ -256,15 +257,18 @@ async function getProduct(slug: string): Promise<DemoProduct | null> {
         "Premium decorative floor register, precision-engineered from heavy-gauge steel.",
       finishes: Array.from(finishMap.values()),
       sizes: Array.from(sizeMap.values()),
-      images: images
-        .sort(
-          (a: { display_order: number }, b: { display_order: number }) =>
-            a.display_order - b.display_order
-        )
-        .map((img: { image_url: string; alt_text: string | null }) => ({
-          url: img.image_url,
-          alt: img.alt_text || product.name,
-        })),
+      images: images.length > 0
+        ? images
+            .sort(
+              (a: { display_order: number }, b: { display_order: number }) =>
+                a.display_order - b.display_order
+            )
+            .slice(0, 8)
+            .map((img: { image_url: string; alt_text: string | null }) => ({
+              url: img.image_url,
+              alt: img.alt_text || product.name,
+            }))
+        : getProductGalleryUrls(styleData?.name || "Art Deco", Array.from(finishMap.values())[0]?.name || "Antique Brass"),
       relatedProducts: [], // Will fetch separately if needed
     };
   } catch {
