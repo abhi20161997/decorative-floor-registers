@@ -3,52 +3,8 @@
 import { motion } from "framer-motion";
 import Link from "next/link";
 
-function RegisterIllustration({ className }: { className?: string }) {
-  return (
-    <div
-      className={className}
-      style={{
-        perspective: "800px",
-      }}
-    >
-      <motion.div
-        className="relative"
-        style={{
-          transform: "rotateX(8deg) rotateY(-4deg)",
-          transformStyle: "preserve-3d",
-        }}
-        whileHover={{
-          transform: "rotateX(4deg) rotateY(-2deg)",
-        }}
-        transition={{ duration: 0.4, ease: "easeOut" }}
-      >
-        <div
-          className="rounded-lg border-2 border-white/20 p-4 shadow-2xl"
-          style={{
-            background:
-              "linear-gradient(145deg, rgba(255,255,255,0.1), rgba(255,255,255,0.02))",
-            boxShadow:
-              "0 25px 50px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.15)",
-          }}
-        >
-          <div className="grid grid-cols-6 gap-1.5">
-            {Array.from({ length: 24 }).map((_, i) => (
-              <div
-                key={i}
-                className="aspect-[3/1] rounded-sm"
-                style={{
-                  background:
-                    "linear-gradient(180deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.35) 100%)",
-                  boxShadow: "inset 0 1px 2px rgba(0,0,0,0.3)",
-                }}
-              />
-            ))}
-          </div>
-        </div>
-      </motion.div>
-    </div>
-  );
-}
+const HERO_IMAGE_URL =
+  "https://mohjyircqwhmxlkqiasl.supabase.co/storage/v1/object/public/product-images/products/art-deco/antique-brass/4X10/1.webp";
 
 const containerVariants = {
   hidden: {},
@@ -127,7 +83,7 @@ export default function Hero() {
           </motion.div>
         </motion.div>
 
-        {/* Right side: Metallic showcase */}
+        {/* Right side: Product photo showcase */}
         <motion.div
           className="relative flex flex-1 items-center justify-center"
           initial={{ opacity: 0, scale: 0.95 }}
@@ -139,10 +95,9 @@ export default function Hero() {
             style={{
               background:
                 "linear-gradient(135deg, #d4c5b0 0%, #c9a96e 30%, #b8976a 60%, #d4b978 100%)",
-              backgroundSize: "400% 400%",
             }}
           >
-            {/* Animated metallic background */}
+            {/* Metallic background for premium feel */}
             <div
               className="absolute inset-0 animate-metallic-shift"
               style={{
@@ -152,22 +107,32 @@ export default function Hero() {
               }}
             />
 
-            {/* Brushed metal texture */}
-            <div className="texture-brushed-metal absolute inset-0" />
+            {/* Real product image */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={HERO_IMAGE_URL}
+              alt="Art Deco decorative floor register in Antique Brass finish"
+              className="absolute inset-0 h-full w-full object-cover"
+              loading="eager"
+            />
+
+            {/* Subtle gradient overlay for premium feel */}
+            <div
+              className="pointer-events-none absolute inset-0"
+              style={{
+                background:
+                  "linear-gradient(180deg, transparent 50%, rgba(0,0,0,0.15) 100%)",
+              }}
+            />
 
             {/* Animated light reflection */}
             <div
               className="pointer-events-none absolute inset-0 animate-light-reflect"
               style={{
                 background:
-                  "radial-gradient(ellipse at 30% 30%, rgba(255,255,255,0.35) 0%, transparent 60%)",
+                  "radial-gradient(ellipse at 30% 30%, rgba(255,255,255,0.2) 0%, transparent 60%)",
               }}
             />
-
-            {/* Register illustration */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <RegisterIllustration className="w-48 md:w-56" />
-            </div>
           </div>
         </motion.div>
       </div>

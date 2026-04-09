@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import ScrollReveal from "@/components/animations/ScrollReveal";
+import { getProductImageUrl } from "@/lib/image-urls";
 
 const COLLECTIONS = [
   {
@@ -10,6 +11,7 @@ const COLLECTIONS = [
     gradient:
       "linear-gradient(145deg, #d4c5b0 0%, #c9a96e 50%, #d4b978 100%)",
     description: "Elegant 1920s-inspired patterns with bold geometric lines",
+    imageUrl: getProductImageUrl("Art Deco", "Antique Brass"),
   },
   {
     name: "Contemporary",
@@ -18,6 +20,7 @@ const COLLECTIONS = [
       "linear-gradient(145deg, #3a3632 0%, #2c2420 50%, #1a1714 100%)",
     textColor: "text-linen",
     description: "Clean, minimal designs for modern interiors",
+    imageUrl: getProductImageUrl("Contemporary", "Black"),
   },
   {
     name: "Geometrical",
@@ -26,35 +29,9 @@ const COLLECTIONS = [
       "linear-gradient(145deg, #9a7b4f 0%, #8b6f3a 50%, #6b5533 100%)",
     textColor: "text-linen",
     description: "Precise repeating patterns with mathematical harmony",
+    imageUrl: getProductImageUrl("Geometrical", "Bronze"),
   },
 ];
-
-function SmallRegister() {
-  return (
-    <div className="mx-auto w-24">
-      <div
-        className="rounded border border-white/20 p-2"
-        style={{
-          background:
-            "linear-gradient(145deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))",
-          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.1)",
-        }}
-      >
-        <div className="grid grid-cols-6 gap-0.5">
-          {Array.from({ length: 24 }).map((_, i) => (
-            <div
-              key={i}
-              className="aspect-[3/1] rounded-[1px]"
-              style={{
-                background: "rgba(0,0,0,0.35)",
-              }}
-            />
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default function CollectionShowcase() {
   return (
@@ -82,22 +59,32 @@ export default function CollectionShowcase() {
                   className="relative flex h-72 flex-col items-center justify-center p-8"
                   style={{ background: collection.gradient }}
                 >
-                  {/* Brushed metal texture */}
-                  <div className="texture-brushed-metal absolute inset-0" />
+                  {/* Real product image */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={collection.imageUrl}
+                    alt={`${collection.name} floor register`}
+                    className="absolute inset-0 h-full w-full object-cover"
+                    loading="lazy"
+                  />
+
+                  {/* Gradient overlay for text readability */}
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      background:
+                        "linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.55) 100%)",
+                    }}
+                  />
 
                   <div className="relative z-10 flex flex-col items-center">
-                    <SmallRegister />
                     <h3
-                      className={`mt-6 font-display text-3xl font-medium ${
-                        collection.textColor || "text-espresso"
-                      }`}
+                      className="mt-6 font-display text-3xl font-medium text-white drop-shadow-md"
                     >
                       {collection.name}
                     </h3>
                     <span
-                      className={`mt-3 text-sm tracking-wide opacity-80 transition-opacity duration-300 group-hover:opacity-100 ${
-                        collection.textColor || "text-umber"
-                      }`}
+                      className="mt-3 text-sm tracking-wide text-white/80 transition-opacity duration-300 group-hover:text-white"
                     >
                       Explore Collection &rarr;
                     </span>
