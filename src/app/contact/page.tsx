@@ -100,6 +100,31 @@ export default function ContactPage() {
                     business hours.
                   </p>
                 </div>
+
+                {/* Custom Orders */}
+                <div className="rounded-lg border border-antique-gold/30 bg-warm-white p-6">
+                  <h3 className="font-display text-lg font-medium text-espresso">
+                    Custom Sizes &amp; Designs
+                  </h3>
+                  <p className="mt-2 text-sm leading-relaxed text-umber">
+                    Any custom size or design is possible with a development
+                    fee and lead-time quote. Send us a sketch, CAD file, or
+                    rough dimensions and we&apos;ll come back with pricing and
+                    a timeline.
+                  </p>
+                </div>
+
+                {/* Bulk Discount */}
+                <div className="rounded-lg border border-linen bg-warm-white p-6">
+                  <h3 className="font-display text-lg font-medium text-espresso">
+                    Bulk &amp; Trade Pricing
+                  </h3>
+                  <p className="mt-2 text-sm leading-relaxed text-umber">
+                    Buying the same design, finish &amp; size in quantity?
+                    5&plus; pieces get 10% off, 10&plus; pieces get 15% off
+                    automatically at checkout.
+                  </p>
+                </div>
               </div>
             </ScrollReveal>
           </div>

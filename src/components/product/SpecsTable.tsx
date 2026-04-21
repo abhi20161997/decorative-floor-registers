@@ -1,9 +1,11 @@
 const specs = [
-  { label: "Material", value: "Steel" },
+  { label: "Material", value: "Steel — sheet metal louvers (not plastic)" },
   { label: "Gauge", value: "1.5mm" },
+  { label: "Gauze", value: "2mm" },
   { label: "Damper", value: "Adjustable multi-angle" },
   { label: "Construction", value: "Individually welded" },
-  { label: "Mounting", value: "Drop-in" },
+  { label: "Mounting", value: "Drop-in (floor) — wall use with spring clips (sold separately)" },
+  { label: "Custom Orders", value: "Any size or design possible with development fee & timeline" },
 ];
 
 export default function SpecsTable() {

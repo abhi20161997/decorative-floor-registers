@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { computeUnitPrice } from "@/lib/pricing";
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
@@ -91,7 +92,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Build Stripe line items
+    // Build Stripe line items (applies tiered bulk pricing per SKU)
     const lineItems = variants.map((variant) => {
       const product = variant.product as unknown as {
         id: string;
@@ -108,6 +109,7 @@ export async function POST(request: NextRequest) {
         label: string;
       };
       const item = items.find((i) => i.variantId === variant.id)!;
+      const unitAmount = computeUnitPrice(variant.price, item.quantity);
 
       return {
         price_data: {
@@ -116,7 +118,7 @@ export async function POST(request: NextRequest) {
             name: product.name,
             description: `${finish.name} - ${size.label}`,
           },
-          unit_amount: Math.round(variant.price * 100), // Stripe uses cents
+          unit_amount: Math.round(unitAmount * 100), // Stripe uses cents
         },
         quantity: item.quantity,
       };
@@ -159,10 +161,10 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Validate minimum order total
+      // Validate minimum order total (against tier-discounted subtotal)
       const subtotal = variants.reduce((sum, v) => {
         const qty = items.find((i) => i.variantId === v.id)!.quantity;
-        return sum + v.price * qty;
+        return sum + computeUnitPrice(v.price, qty) * qty;
       }, 0);
 
       if (

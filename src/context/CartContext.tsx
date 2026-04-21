@@ -8,6 +8,7 @@ import {
   useCallback,
 } from "react";
 import type { CartItem } from "@/types";
+import { computeLineTotal } from "@/lib/pricing";
 
 type CartContextType = {
   items: CartItem[];
@@ -16,7 +17,9 @@ type CartContextType = {
   updateQuantity: (variantId: string, quantity: number) => void;
   clearCart: () => void;
   itemCount: number;
+  subtotalBeforeDiscount: number;
   subtotal: number;
+  bulkSavings: number;
 };
 
 const CartContext = createContext<CartContextType | null>(null);
@@ -74,7 +77,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const clearCart = useCallback(() => setItems([]), []);
 
   const itemCount = items.reduce((sum, i) => sum + i.quantity, 0);
-  const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+  const subtotalBeforeDiscount = items.reduce(
+    (sum, i) => sum + i.price * i.quantity,
+    0
+  );
+  const subtotal = items.reduce(
+    (sum, i) => sum + computeLineTotal(i.price, i.quantity),
+    0
+  );
+  const bulkSavings = subtotalBeforeDiscount - subtotal;
 
   return (
     <CartContext.Provider
@@ -85,7 +96,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         updateQuantity,
         clearCart,
         itemCount,
+        subtotalBeforeDiscount,
         subtotal,
+        bulkSavings,
       }}
     >
       {children}

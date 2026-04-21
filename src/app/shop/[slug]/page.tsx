@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createStaticClient } from "@/lib/supabase/static";
-import { getProductGalleryUrls } from "@/lib/image-urls";
+import { getProductGalleryUrls, getProductImageUrl } from "@/lib/image-urls";
 import ProductDetail from "./ProductDetail";
 import RelatedProducts from "@/components/product/RelatedProducts";
 import ProductJsonLd from "@/components/product/ProductJsonLd";
@@ -34,6 +34,16 @@ type DemoRelated = {
   finishes: { name: string; hex: string; gradient: string }[];
 };
 
+type ProductImageLite = { url: string; alt: string };
+
+type VariantRef = {
+  id: string;
+  finishId: string;
+  sizeId: string;
+  price: number;
+  inStock: boolean;
+};
+
 type DemoProduct = {
   name: string;
   slug: string;
@@ -41,7 +51,10 @@ type DemoProduct = {
   description: string;
   finishes: DemoFinish[];
   sizes: DemoSize[];
-  images: { url: string; alt: string }[];
+  images: ProductImageLite[];
+  imagesByFinish: Record<string, ProductImageLite[]>;
+  variants: VariantRef[];
+  cadUrl: string | null;
   relatedProducts: DemoRelated[];
 };
 
@@ -87,6 +100,30 @@ const sharedRelatedFinishes = sharedFinishes.map((f) => ({
   gradient: f.gradient,
 }));
 
+function buildDemoImagesByFinish(styleName: string): Record<string, ProductImageLite[]> {
+  const map: Record<string, ProductImageLite[]> = {};
+  for (const f of sharedFinishes) {
+    map[f.id] = getProductGalleryUrls(styleName, f.name);
+  }
+  return map;
+}
+
+function buildDemoVariants(): VariantRef[] {
+  const variants: VariantRef[] = [];
+  for (const f of sharedFinishes) {
+    for (const s of sharedSizes) {
+      variants.push({
+        id: `demo-${f.id}-${s.id}`,
+        finishId: f.id,
+        sizeId: s.id,
+        price: s.price,
+        inStock: s.inStock,
+      });
+    }
+  }
+  return variants;
+}
+
 const demoProducts: Record<string, DemoProduct> = {
   "art-deco-floor-register": {
     name: "Art Deco Floor Register",
@@ -97,12 +134,16 @@ const demoProducts: Record<string, DemoProduct> = {
     finishes: sharedFinishes,
     sizes: sharedSizes,
     images: getProductGalleryUrls("Art Deco", "Antique Brass"),
+    imagesByFinish: buildDemoImagesByFinish("Art Deco"),
+    variants: buildDemoVariants(),
+    cadUrl: null,
     relatedProducts: [
       {
         name: "Contemporary Floor Register",
         slug: "contemporary-floor-register",
         styleName: "Contemporary",
         basePrice: 9.9,
+        imageUrl: getProductImageUrl("Contemporary", "Antique Brass"),
         finishes: sharedRelatedFinishes,
       },
       {
@@ -110,6 +151,7 @@ const demoProducts: Record<string, DemoProduct> = {
         slug: "geometrical-floor-register",
         styleName: "Geometrical",
         basePrice: 9.9,
+        imageUrl: getProductImageUrl("Geometrical", "Antique Brass"),
         finishes: sharedRelatedFinishes,
       },
     ],
@@ -123,12 +165,16 @@ const demoProducts: Record<string, DemoProduct> = {
     finishes: sharedFinishes,
     sizes: sharedSizes,
     images: getProductGalleryUrls("Contemporary", "Antique Brass"),
+    imagesByFinish: buildDemoImagesByFinish("Contemporary"),
+    variants: buildDemoVariants(),
+    cadUrl: null,
     relatedProducts: [
       {
         name: "Art Deco Floor Register",
         slug: "art-deco-floor-register",
         styleName: "Art Deco",
         basePrice: 9.9,
+        imageUrl: getProductImageUrl("Art Deco", "Antique Brass"),
         finishes: sharedRelatedFinishes,
       },
       {
@@ -136,6 +182,7 @@ const demoProducts: Record<string, DemoProduct> = {
         slug: "geometrical-floor-register",
         styleName: "Geometrical",
         basePrice: 9.9,
+        imageUrl: getProductImageUrl("Geometrical", "Antique Brass"),
         finishes: sharedRelatedFinishes,
       },
     ],
@@ -149,12 +196,16 @@ const demoProducts: Record<string, DemoProduct> = {
     finishes: sharedFinishes,
     sizes: sharedSizes,
     images: getProductGalleryUrls("Geometrical", "Antique Brass"),
+    imagesByFinish: buildDemoImagesByFinish("Geometrical"),
+    variants: buildDemoVariants(),
+    cadUrl: null,
     relatedProducts: [
       {
         name: "Art Deco Floor Register",
         slug: "art-deco-floor-register",
         styleName: "Art Deco",
         basePrice: 9.9,
+        imageUrl: getProductImageUrl("Art Deco", "Antique Brass"),
         finishes: sharedRelatedFinishes,
       },
       {
@@ -162,6 +213,7 @@ const demoProducts: Record<string, DemoProduct> = {
         slug: "contemporary-floor-register",
         styleName: "Contemporary",
         basePrice: 9.9,
+        imageUrl: getProductImageUrl("Contemporary", "Antique Brass"),
         finishes: sharedRelatedFinishes,
       },
     ],
@@ -186,6 +238,7 @@ async function getProduct(slug: string): Promise<DemoProduct | null> {
         base_price,
         meta_title,
         meta_description,
+        cad_url,
         styles:style_id (name),
         product_variants (
           id,
@@ -198,7 +251,8 @@ async function getProduct(slug: string): Promise<DemoProduct | null> {
           image_url,
           alt_text,
           display_order,
-          is_primary
+          is_primary,
+          finish_id
         )
       `
       )
@@ -246,6 +300,53 @@ async function getProduct(slug: string): Promise<DemoProduct | null> {
         });
       }
     }
+
+    // Build real (finish+size) -> variant.id lookup
+    const variantRefs: VariantRef[] = variants
+      .filter((v) => v.finishes?.id && v.sizes?.id)
+      .map((v) => ({
+        id: v.id as string,
+        finishId: v.finishes.id as string,
+        sizeId: v.sizes.id as string,
+        price: (v.price ?? product.base_price ?? 9.9) as number,
+        inStock: ((v.stock_qty as number | null) ?? 1) > 0,
+      }));
+
+    // Group images by finish (fallback to hardcoded gallery helper if empty)
+    const sortedImages = [...images].sort(
+      (a: { display_order: number }, b: { display_order: number }) =>
+        a.display_order - b.display_order
+    );
+    const imagesByFinish: Record<string, ProductImageLite[]> = {};
+    const MAX_IMAGES_PER_FINISH = 8;
+    for (const img of sortedImages) {
+      const fid = (img.finish_id as string | null) ?? "";
+      if (!fid) continue;
+      if (!imagesByFinish[fid]) imagesByFinish[fid] = [];
+      if (imagesByFinish[fid].length >= MAX_IMAGES_PER_FINISH) continue;
+      imagesByFinish[fid].push({
+        url: img.image_url as string,
+        alt: (img.alt_text as string | null) || product.name,
+      });
+    }
+    // Fallback: any finish without images falls back to the storage-URL helper
+    for (const [fid, f] of finishMap) {
+      if (!imagesByFinish[fid] || imagesByFinish[fid].length === 0) {
+        imagesByFinish[fid] = getProductGalleryUrls(
+          styleData?.name || "Art Deco",
+          f.name
+        );
+      }
+    }
+
+    // Images for the initially-selected finish (first in map)
+    const firstFinish = Array.from(finishMap.values())[0];
+    const initialImages: ProductImageLite[] =
+      (firstFinish && imagesByFinish[firstFinish.id]) ||
+      getProductGalleryUrls(
+        styleData?.name || "Art Deco",
+        firstFinish?.name || "Antique Brass"
+      );
     /* eslint-enable @typescript-eslint/no-explicit-any */
 
     return {
@@ -257,18 +358,10 @@ async function getProduct(slug: string): Promise<DemoProduct | null> {
         "Premium decorative floor register, precision-engineered from heavy-gauge steel.",
       finishes: Array.from(finishMap.values()),
       sizes: Array.from(sizeMap.values()),
-      images: images.length > 0
-        ? images
-            .sort(
-              (a: { display_order: number }, b: { display_order: number }) =>
-                a.display_order - b.display_order
-            )
-            .slice(0, 8)
-            .map((img: { image_url: string; alt_text: string | null }) => ({
-              url: img.image_url,
-              alt: img.alt_text || product.name,
-            }))
-        : getProductGalleryUrls(styleData?.name || "Art Deco", Array.from(finishMap.values())[0]?.name || "Antique Brass"),
+      images: initialImages,
+      imagesByFinish,
+      variants: variantRefs,
+      cadUrl: (product.cad_url as string | null) ?? null,
       relatedProducts: [], // Will fetch separately if needed
     };
   } catch {

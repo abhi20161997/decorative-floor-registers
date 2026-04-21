@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCartContext } from "@/context/CartContext";
 import { formatPrice } from "@/lib/utils";
+import { computeLineTotal, computeUnitPrice, getActiveTier } from "@/lib/pricing";
 import type { CartItem as CartItemType } from "@/types";
 
 type CartItemProps = {
@@ -11,6 +12,9 @@ type CartItemProps = {
 
 export default function CartItem({ item }: CartItemProps) {
   const { updateQuantity, removeItem } = useCartContext();
+  const discountedUnit = computeUnitPrice(item.price, item.quantity);
+  const lineTotal = computeLineTotal(item.price, item.quantity);
+  const activeTier = getActiveTier(item.quantity);
 
   return (
     <div className="flex flex-col gap-4 border-b border-linen py-5 sm:flex-row sm:items-center">
@@ -47,9 +51,23 @@ export default function CartItem({ item }: CartItemProps) {
         <p className="text-sm text-umber">
           {item.finishName} &middot; {item.sizeName}
         </p>
-        <p className="text-sm font-medium text-espresso">
-          {formatPrice(item.price)}
-        </p>
+        {activeTier ? (
+          <p className="text-sm font-medium text-espresso">
+            <span className="text-antique-gold">
+              {formatPrice(discountedUnit)}
+            </span>{" "}
+            <span className="text-umber line-through">
+              {formatPrice(item.price)}
+            </span>{" "}
+            <span className="text-xs text-antique-gold">
+              ({activeTier.discountPct}% off &middot; {activeTier.minQty}+)
+            </span>
+          </p>
+        ) : (
+          <p className="text-sm font-medium text-espresso">
+            {formatPrice(item.price)}
+          </p>
+        )}
       </div>
 
       {/* Quantity selector */}
@@ -97,7 +115,7 @@ export default function CartItem({ item }: CartItemProps) {
       {/* Line total & remove */}
       <div className="flex items-center gap-4 sm:flex-col sm:items-end sm:gap-1">
         <span className="text-sm font-semibold text-espresso">
-          {formatPrice(item.price * item.quantity)}
+          {formatPrice(lineTotal)}
         </span>
         <button
           onClick={() => removeItem(item.variantId)}

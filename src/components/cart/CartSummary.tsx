@@ -8,7 +8,8 @@ const FREE_SHIPPING_THRESHOLD = 50;
 const SHIPPING_COST = 5.99;
 
 export default function CartSummary() {
-  const { items, subtotal } = useCartContext();
+  const { items, subtotal, subtotalBeforeDiscount, bulkSavings } =
+    useCartContext();
   const [discountCode, setDiscountCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -71,9 +72,19 @@ export default function CartSummary() {
         <div className="flex items-center justify-between text-sm">
           <span className="text-umber">Subtotal</span>
           <span className="font-medium text-espresso">
-            {formatPrice(subtotal)}
+            {formatPrice(subtotalBeforeDiscount)}
           </span>
         </div>
+
+        {/* Bulk savings */}
+        {bulkSavings > 0 && (
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-antique-gold">Bulk discount</span>
+            <span className="font-medium text-antique-gold">
+              &minus;{formatPrice(bulkSavings)}
+            </span>
+          </div>
+        )}
 
         {/* Shipping */}
         <div className="flex items-center justify-between text-sm">

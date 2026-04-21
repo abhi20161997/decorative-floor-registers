@@ -3,10 +3,10 @@
 import ScrollReveal from "@/components/animations/ScrollReveal";
 
 const TRUST_ITEMS = [
-  { icon: "\u2605", label: "Premium Steel", value: "1.5mm Gauge" },
-  { icon: "\u2699", label: "3 Collections", value: "Designs" },
-  { icon: "\u25C6", label: "3 Metallic", value: "Finishes" },
-  { icon: "\u2713", label: "Free over $50", value: "Shipping" },
+  { icon: "★", label: "Sheet Metal Louvers", value: "Not Plastic" },
+  { icon: "⚙", label: "1.5mm Steel", value: "2mm Gauze" },
+  { icon: "◆", label: "Floor & Wall", value: "3 Designs" },
+  { icon: "✓", label: "Free over $50", value: "Shipping" },
 ];
 
 export default function TrustStrip() {
