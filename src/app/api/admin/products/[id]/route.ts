@@ -49,6 +49,7 @@ export async function PUT(
       base_price: body.base_price || null,
       meta_title: body.meta_title || null,
       meta_description: body.meta_description || null,
+      cad_url: body.cad_url || null,
       active: body.active,
       updated_at: new Date().toISOString(),
     })

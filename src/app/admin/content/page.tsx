@@ -9,6 +9,7 @@ const PAGE_TABS = [
   { label: "FAQ", value: "faq" },
   { label: "Sizing Guide", value: "sizing-guide" },
   { label: "Shipping", value: "shipping" },
+  { label: "Contact", value: "contact" },
 ];
 
 type BlockForm = {
@@ -17,6 +18,14 @@ type BlockForm = {
   image_url: string;
   meta_title: string;
   meta_description: string;
+};
+
+type NewBlockForm = {
+  page: string;
+  section_key: string;
+  title: string;
+  body: string;
+  display_order: string;
 };
 
 export default function AdminContentPage() {
@@ -31,6 +40,17 @@ export default function AdminContentPage() {
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [successId, setSuccessId] = useState<string | null>(null);
+
+  // Create new block
+  const [showNew, setShowNew] = useState(false);
+  const [newForm, setNewForm] = useState<NewBlockForm>({
+    page: "homepage",
+    section_key: "",
+    title: "",
+    body: "",
+    display_order: "0",
+  });
+  const [creating, setCreating] = useState(false);
 
   const fetchContent = useCallback(async () => {
     try {
@@ -117,6 +137,60 @@ export default function AdminContentPage() {
     }
   };
 
+  const handleCreate = async () => {
+    if (!newForm.page || !newForm.section_key) return;
+    setCreating(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/content", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          page: newForm.page,
+          section_key: newForm.section_key,
+          title: newForm.title || null,
+          body: newForm.body || null,
+          display_order: parseInt(newForm.display_order) || 0,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to create");
+      }
+      setShowNew(false);
+      setNewForm({
+        page: "homepage",
+        section_key: "",
+        title: "",
+        body: "",
+        display_order: "0",
+      });
+      fetchContent();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create");
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleDelete = async (blockId: string, sectionKey: string) => {
+    if (!confirm(`Delete block "${sectionKey}"? This cannot be undone.`))
+      return;
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/content?id=${blockId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to delete");
+      }
+      fetchContent();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete");
+    }
+  };
+
   const currentBlocks = contentByPage?.[activeTab] ?? [];
 
   return (
@@ -125,7 +199,110 @@ export default function AdminContentPage() {
         <h1 className="font-display text-display-md text-espresso">
           Content Management
         </h1>
+        <button
+          onClick={() => setShowNew(!showNew)}
+          className="px-4 py-2 rounded-lg bg-espresso text-white font-medium hover:bg-espresso/90"
+        >
+          {showNew ? "Cancel" : "New Block"}
+        </button>
       </div>
+
+      {showNew && (
+        <div className="bg-white rounded-xl shadow-sm p-6 mb-6 max-w-2xl">
+          <h2 className="font-display text-lg text-espresso mb-4">
+            Create new content block
+          </h2>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-espresso">
+                Page *
+              </label>
+              <select
+                value={newForm.page}
+                onChange={(e) =>
+                  setNewForm((p) => ({ ...p, page: e.target.value }))
+                }
+                className="w-full rounded-md border border-linen bg-ivory px-3 py-2 text-sm text-espresso focus:border-antique-gold focus:outline-none"
+              >
+                {PAGE_TABS.map((t) => (
+                  <option key={t.value} value={t.value}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-espresso">
+                Section Key *
+              </label>
+              <input
+                type="text"
+                value={newForm.section_key}
+                onChange={(e) =>
+                  setNewForm((p) => ({
+                    ...p,
+                    section_key: e.target.value.replace(/[^a-z0-9_-]/gi, "_").toLowerCase(),
+                  }))
+                }
+                placeholder="e.g. hero_banner"
+                className="w-full rounded-md border border-linen bg-ivory px-3 py-2 text-sm text-espresso focus:border-antique-gold focus:outline-none"
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="mb-1 block text-sm font-medium text-espresso">
+                Title
+              </label>
+              <input
+                type="text"
+                value={newForm.title}
+                onChange={(e) =>
+                  setNewForm((p) => ({ ...p, title: e.target.value }))
+                }
+                className="w-full rounded-md border border-linen bg-ivory px-3 py-2 text-sm text-espresso focus:border-antique-gold focus:outline-none"
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="mb-1 block text-sm font-medium text-espresso">
+                Body
+              </label>
+              <textarea
+                rows={3}
+                value={newForm.body}
+                onChange={(e) =>
+                  setNewForm((p) => ({ ...p, body: e.target.value }))
+                }
+                className="w-full rounded-md border border-linen bg-ivory px-3 py-2 text-sm text-espresso focus:border-antique-gold focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-espresso">
+                Display Order
+              </label>
+              <input
+                type="number"
+                value={newForm.display_order}
+                onChange={(e) =>
+                  setNewForm((p) => ({ ...p, display_order: e.target.value }))
+                }
+                className="w-full rounded-md border border-linen bg-ivory px-3 py-2 text-sm text-espresso focus:border-antique-gold focus:outline-none"
+              />
+            </div>
+          </div>
+          <div className="mt-4">
+            <button
+              onClick={handleCreate}
+              disabled={creating || !newForm.section_key}
+              className="px-4 py-2 rounded-md bg-espresso text-white text-sm font-medium hover:bg-espresso/90 disabled:opacity-50"
+            >
+              {creating ? "Creating..." : "Create Block"}
+            </button>
+          </div>
+          <p className="mt-2 text-xs text-umber">
+            The <code>section_key</code> is what the frontend reads — e.g.
+            <code>&quot;hero_banner&quot;</code>. Must be unique per page.
+          </p>
+        </div>
+      )}
 
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 mb-6">
@@ -177,9 +354,17 @@ export default function AdminContentPage() {
                       .replace(/_/g, " ")
                       .replace(/\b\w/g, (c) => c.toUpperCase())}
                   </h2>
-                  <span className="text-xs text-umber font-mono">
-                    {block.section_key}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-umber font-mono">
+                      {block.section_key}
+                    </span>
+                    <button
+                      onClick={() => handleDelete(block.id, block.section_key)}
+                      className="text-xs text-red-600 hover:text-red-800"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
 
                 <div className="space-y-4">

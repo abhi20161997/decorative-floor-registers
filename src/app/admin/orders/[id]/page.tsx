@@ -42,6 +42,8 @@ export default function AdminOrderDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [refunding, setRefunding] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [newStatus, setNewStatus] = useState<OrderStatus>("pending");
   const [trackingNumber, setTrackingNumber] = useState("");
   const [notes, setNotes] = useState("");
@@ -97,6 +99,56 @@ export default function AdminOrderDetailPage() {
       setError(err instanceof Error ? err.message : "Update failed");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleRefund = async () => {
+    const hasPI = Boolean(order?.stripe_payment_intent_id);
+    const msg = hasPI
+      ? "Issue a Stripe refund and mark this order cancelled? This cannot be undone."
+      : "This order has no Stripe payment intent on record. Proceed to mark cancelled without issuing a refund?";
+    if (!confirm(msg)) return;
+    setRefunding(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/orders/${orderId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "refund" }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Refund failed");
+      }
+      await fetchOrder();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Refund failed");
+    } finally {
+      setRefunding(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (
+      !confirm(
+        "Permanently delete this order record? The Stripe payment is NOT reversed. Use Refund instead unless you know what you're doing."
+      )
+    )
+      return;
+    setDeleting(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/orders/${orderId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Delete failed");
+      }
+      router.push("/admin/orders");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Delete failed");
+      setDeleting(false);
     }
   };
 
@@ -350,6 +402,30 @@ export default function AdminOrderDetailPage() {
               >
                 {saving ? "Saving..." : "Update Order"}
               </button>
+
+              {/* Refund / Delete */}
+              <div className="pt-4 border-t border-linen space-y-2">
+                {order.status !== "cancelled" && (
+                  <button
+                    onClick={handleRefund}
+                    disabled={refunding}
+                    className="w-full px-4 py-2 rounded-lg border border-red-600 text-red-600 text-sm font-medium hover:bg-red-600 hover:text-white transition-colors disabled:opacity-50"
+                  >
+                    {refunding
+                      ? "Processing..."
+                      : order.stripe_payment_intent_id
+                        ? "Refund & Cancel"
+                        : "Mark Cancelled"}
+                  </button>
+                )}
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="w-full px-4 py-2 rounded-lg text-xs text-umber hover:text-red-600 transition-colors disabled:opacity-50"
+                >
+                  {deleting ? "Deleting..." : "Delete order record"}
+                </button>
+              </div>
             </div>
           </div>
 

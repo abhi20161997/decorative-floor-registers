@@ -62,3 +62,62 @@ export async function PUT(request: NextRequest) {
 
   return NextResponse.json(data);
 }
+
+export async function POST(request: NextRequest) {
+  const { error } = await requireAdmin();
+  if (error) return error;
+
+  const supabase = createAdminClient();
+  const body = await request.json();
+
+  if (!body.page || !body.section_key) {
+    return NextResponse.json(
+      { error: "page and section_key are required" },
+      { status: 400 }
+    );
+  }
+
+  const { data, error: dbError } = await supabase
+    .from("content_blocks")
+    .insert({
+      page: body.page,
+      section_key: body.section_key,
+      title: body.title || null,
+      body: body.body || null,
+      image_url: body.image_url || null,
+      display_order: body.display_order ?? 0,
+      meta_title: body.meta_title || null,
+      meta_description: body.meta_description || null,
+    })
+    .select()
+    .single();
+
+  if (dbError) {
+    return NextResponse.json({ error: dbError.message }, { status: 500 });
+  }
+
+  return NextResponse.json(data, { status: 201 });
+}
+
+export async function DELETE(request: NextRequest) {
+  const { error } = await requireAdmin();
+  if (error) return error;
+
+  const url = new URL(request.url);
+  const id = url.searchParams.get("id");
+  if (!id) {
+    return NextResponse.json({ error: "Missing id" }, { status: 400 });
+  }
+
+  const supabase = createAdminClient();
+  const { error: dbError } = await supabase
+    .from("content_blocks")
+    .delete()
+    .eq("id", id);
+
+  if (dbError) {
+    return NextResponse.json({ error: dbError.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ success: true });
+}

@@ -58,6 +58,12 @@ export default function AdminCustomersPage() {
         <h1 className="font-display text-display-md text-espresso">
           Customers
         </h1>
+        <a
+          href="/api/admin/export/customers"
+          className="px-4 py-2 rounded-lg border border-espresso text-espresso font-medium hover:bg-espresso hover:text-white transition-colors"
+        >
+          Export CSV
+        </a>
       </div>
 
       {/* Search */}

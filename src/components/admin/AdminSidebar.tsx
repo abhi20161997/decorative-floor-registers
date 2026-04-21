@@ -6,10 +6,10 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAdmin } from "@/hooks/useAdmin";
 
 const navItems = [
-  { label: "Dashboard", href: "/admin", icon: "\u25A3" },
+  { label: "Dashboard", href: "/admin", icon: "▣" },
   {
     label: "Products",
-    icon: "\u25A6",
+    icon: "▦",
     children: [
       { label: "All Products", href: "/admin/products" },
       { label: "Categories", href: "/admin/categories" },
@@ -18,11 +18,12 @@ const navItems = [
       { label: "Sizes", href: "/admin/sizes" },
     ],
   },
-  { label: "Orders", href: "/admin/orders", icon: "\u2630" },
-  { label: "Customers", href: "/admin/customers", icon: "\u2603" },
-  { label: "Discounts", href: "/admin/discounts", icon: "\u2605" },
-  { label: "Content", href: "/admin/content", icon: "\u270E" },
-  { label: "Settings", href: "/admin/settings", icon: "\u2699" },
+  { label: "Orders", href: "/admin/orders", icon: "☰" },
+  { label: "Customers", href: "/admin/customers", icon: "☃" },
+  { label: "Discounts", href: "/admin/discounts", icon: "★" },
+  { label: "Content", href: "/admin/content", icon: "✎" },
+  { label: "Admin Users", href: "/admin/admin-users", icon: "⚿" },
+  { label: "Settings", href: "/admin/settings", icon: "⚙" },
 ];
 
 export function AdminSidebar() {

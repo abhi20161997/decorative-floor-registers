@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, use } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { generateSlug, formatPrice } from "@/lib/utils";
-import type { Category, Style, Finish, Size, ProductVariant } from "@/types";
+import type { Category, Style, Finish, Size, ProductVariant, ProductImage } from "@/types";
 
 type VariantRow = ProductVariant & {
   finish: Finish;
@@ -21,6 +21,7 @@ type ProductData = {
   base_price: number | null;
   meta_title: string | null;
   meta_description: string | null;
+  cad_url: string | null;
   active: boolean;
   variants: VariantRow[];
 };
@@ -33,6 +34,7 @@ export default function AdminProductEditPage({
   const { id } = use(params);
   const router = useRouter();
   const [product, setProduct] = useState<ProductData | null>(null);
+  const [images, setImages] = useState<ProductImage[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [styles, setStyles] = useState<Style[]>([]);
   const [allFinishes, setAllFinishes] = useState<Finish[]>([]);
@@ -57,6 +59,10 @@ export default function AdminProductEditPage({
   const [bulkPrice, setBulkPrice] = useState("");
   const [bulkUpdating, setBulkUpdating] = useState(false);
 
+  // Image upload
+  const [uploadingFinishId, setUploadingFinishId] = useState<string | null>(null);
+  const [uploadingCad, setUploadingCad] = useState(false);
+
   const [form, setForm] = useState({
     name: "",
     slug: "",
@@ -66,6 +72,7 @@ export default function AdminProductEditPage({
     base_price: "",
     meta_title: "",
     meta_description: "",
+    cad_url: "",
     active: true,
   });
 
@@ -95,8 +102,19 @@ export default function AdminProductEditPage({
       base_price: p.base_price?.toString() ?? "",
       meta_title: p.meta_title ?? "",
       meta_description: p.meta_description ?? "",
+      cad_url: p.cad_url ?? "",
       active: p.active,
     });
+  }, [id]);
+
+  const fetchImages = useCallback(async () => {
+    const supabase = createClient();
+    const { data } = await supabase
+      .from("product_images")
+      .select("*")
+      .eq("product_id", id)
+      .order("display_order", { ascending: true });
+    setImages((data ?? []) as ProductImage[]);
   }, [id]);
 
   useEffect(() => {
@@ -114,7 +132,8 @@ export default function AdminProductEditPage({
     });
 
     fetchProduct();
-  }, [fetchProduct]);
+    fetchImages();
+  }, [fetchProduct, fetchImages]);
 
   const updateField = (field: string, value: string | boolean) => {
     setForm((prev) => {
@@ -144,6 +163,7 @@ export default function AdminProductEditPage({
         base_price: form.base_price ? parseFloat(form.base_price) : null,
         meta_title: form.meta_title || null,
         meta_description: form.meta_description || null,
+        cad_url: form.cad_url || null,
         active: form.active,
         updated_at: new Date().toISOString(),
       })
@@ -242,6 +262,25 @@ export default function AdminProductEditPage({
     fetchProduct();
   };
 
+  const deleteVariant = async (variantId: string) => {
+    if (!confirm("Delete this variant? This cannot be undone.")) return;
+    const supabase = createClient();
+    const { error: dbError } = await supabase
+      .from("product_variants")
+      .delete()
+      .eq("id", variantId);
+    if (dbError) {
+      setError(dbError.message);
+      return;
+    }
+    setSelectedVariants((prev) => {
+      const next = new Set(prev);
+      next.delete(variantId);
+      return next;
+    });
+    fetchProduct();
+  };
+
   const toggleVariantSelection = (variantId: string) => {
     setSelectedVariants((prev) => {
       const next = new Set(prev);
@@ -251,6 +290,148 @@ export default function AdminProductEditPage({
     });
   };
 
+  // --- Image upload/manage helpers ---
+
+  const uploadFile = async (file: File): Promise<string> => {
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch("/api/admin/upload", { method: "POST", body: fd });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Upload failed");
+    return data.url as string;
+  };
+
+  const handleImageUpload = async (
+    files: FileList | null,
+    finishId: string
+  ) => {
+    if (!files || files.length === 0) return;
+    setUploadingFinishId(finishId);
+    setError(null);
+    const supabase = createClient();
+
+    try {
+      // Find current max display_order for this (product, finish)
+      const currentMax = Math.max(
+        0,
+        ...images
+          .filter((i) => i.finish_id === finishId)
+          .map((i) => i.display_order)
+      );
+
+      const rows: {
+        product_id: string;
+        finish_id: string;
+        image_url: string;
+        alt_text: string;
+        display_order: number;
+        is_primary: boolean;
+      }[] = [];
+      let order = currentMax + 1;
+
+      for (const file of Array.from(files)) {
+        const url = await uploadFile(file);
+        rows.push({
+          product_id: id,
+          finish_id: finishId,
+          image_url: url,
+          alt_text: product?.name ?? file.name,
+          display_order: order,
+          is_primary: false,
+        });
+        order += 1;
+      }
+
+      const { error: dbError } = await supabase
+        .from("product_images")
+        .insert(rows);
+      if (dbError) throw new Error(dbError.message);
+      fetchImages();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Image upload failed");
+    } finally {
+      setUploadingFinishId(null);
+    }
+  };
+
+  const handleCadUpload = async (file: File) => {
+    setUploadingCad(true);
+    setError(null);
+    try {
+      const url = await uploadFile(file);
+      updateField("cad_url", url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "CAD upload failed");
+    } finally {
+      setUploadingCad(false);
+    }
+  };
+
+  const deleteImage = async (imageId: string) => {
+    if (!confirm("Delete this image?")) return;
+    const supabase = createClient();
+    const { error: dbError } = await supabase
+      .from("product_images")
+      .delete()
+      .eq("id", imageId);
+    if (dbError) {
+      setError(dbError.message);
+      return;
+    }
+    fetchImages();
+  };
+
+  const setPrimaryImage = async (imageId: string, finishId: string | null) => {
+    const supabase = createClient();
+    // Unset primary for this finish
+    if (finishId) {
+      await supabase
+        .from("product_images")
+        .update({ is_primary: false })
+        .eq("product_id", id)
+        .eq("finish_id", finishId);
+    }
+    await supabase
+      .from("product_images")
+      .update({ is_primary: true })
+      .eq("id", imageId);
+    fetchImages();
+  };
+
+  const moveImage = async (imageId: string, direction: -1 | 1) => {
+    const current = images.find((i) => i.id === imageId);
+    if (!current) return;
+    const siblings = images
+      .filter((i) => i.finish_id === current.finish_id)
+      .sort((a, b) => a.display_order - b.display_order);
+    const index = siblings.findIndex((i) => i.id === imageId);
+    const swapIndex = index + direction;
+    if (swapIndex < 0 || swapIndex >= siblings.length) return;
+    const other = siblings[swapIndex];
+
+    const supabase = createClient();
+    await Promise.all([
+      supabase
+        .from("product_images")
+        .update({ display_order: other.display_order })
+        .eq("id", current.id),
+      supabase
+        .from("product_images")
+        .update({ display_order: current.display_order })
+        .eq("id", other.id),
+    ]);
+    fetchImages();
+  };
+
+  const updateImageAlt = async (imageId: string, alt: string) => {
+    const supabase = createClient();
+    await supabase
+      .from("product_images")
+      .update({ alt_text: alt })
+      .eq("id", imageId);
+    fetchImages();
+  };
+
   if (!product && !error) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -258,6 +439,18 @@ export default function AdminProductEditPage({
       </div>
     );
   }
+
+  // Group images by finish for rendering (include "unassigned" = null)
+  const finishesUsedOnVariants = new Set(
+    product?.variants?.map((v) => v.finish_id).filter(Boolean) ?? []
+  );
+  const imageFinishIds = Array.from(
+    new Set([
+      ...Array.from(finishesUsedOnVariants),
+      ...images.map((i) => i.finish_id).filter((x): x is string => !!x),
+    ])
+  );
+  const finishById = new Map(allFinishes.map((f) => [f.id, f]));
 
   return (
     <div>
@@ -388,6 +581,49 @@ export default function AdminProductEditPage({
             />
           </div>
 
+          {/* CAD URL */}
+          <div>
+            <label className="mb-1 block text-sm font-medium text-espresso">
+              CAD Drawing PDF URL
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="url"
+                value={form.cad_url}
+                onChange={(e) => updateField("cad_url", e.target.value)}
+                placeholder="Paste URL or upload a PDF"
+                className="flex-1 rounded-md border border-linen bg-ivory px-3 py-2 text-sm text-espresso focus:border-antique-gold focus:outline-none focus:ring-1 focus:ring-antique-gold"
+              />
+              <label className="cursor-pointer rounded-md border border-espresso bg-white px-3 py-2 text-sm text-espresso hover:bg-espresso hover:text-white transition-colors">
+                {uploadingCad ? "Uploading..." : "Upload PDF"}
+                <input
+                  type="file"
+                  accept="application/pdf"
+                  className="hidden"
+                  disabled={uploadingCad}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleCadUpload(f);
+                  }}
+                />
+              </label>
+              {form.cad_url && (
+                <a
+                  href={form.cad_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-md border border-linen px-3 py-2 text-sm text-umber hover:text-espresso"
+                >
+                  View
+                </a>
+              )}
+            </div>
+            <p className="mt-1 text-xs text-umber">
+              Leave empty to hide the &quot;Download CAD Drawing&quot; button on
+              the PDP. Remember to click Save after uploading.
+            </p>
+          </div>
+
           <div className="flex items-center gap-2">
             <input
               type="checkbox"
@@ -446,6 +682,139 @@ export default function AdminProductEditPage({
           )}
         </div>
       </form>
+
+      {/* Product Images */}
+      <div className="mt-8 max-w-4xl">
+        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-linen">
+            <h2 className="font-display text-xl text-espresso">
+              Product Images
+            </h2>
+            <p className="text-xs text-umber mt-1">
+              Upload angle shots, detail macros, and room installs per finish.
+              First image per finish becomes the default cart thumbnail.
+            </p>
+          </div>
+
+          {imageFinishIds.length === 0 ? (
+            <div className="px-6 py-12 text-center text-umber text-sm">
+              Generate variants first so you can upload images per finish.
+            </div>
+          ) : (
+            <div className="divide-y divide-linen">
+              {imageFinishIds.map((finishId) => {
+                const finish = finishById.get(finishId);
+                const finishImages = images
+                  .filter((i) => i.finish_id === finishId)
+                  .sort((a, b) => a.display_order - b.display_order);
+                return (
+                  <div key={finishId} className="p-6">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        {finish?.hex_color && (
+                          <span
+                            className="w-4 h-4 rounded-full inline-block border border-linen"
+                            style={{ backgroundColor: finish.hex_color }}
+                          />
+                        )}
+                        <span className="font-medium text-espresso">
+                          {finish?.name ?? "Unknown finish"}
+                        </span>
+                        <span className="text-xs text-umber">
+                          ({finishImages.length}{" "}
+                          {finishImages.length === 1 ? "image" : "images"})
+                        </span>
+                      </div>
+                      <label className="cursor-pointer rounded-md border border-espresso bg-white px-3 py-1.5 text-xs text-espresso hover:bg-espresso hover:text-white transition-colors">
+                        {uploadingFinishId === finishId
+                          ? "Uploading..."
+                          : "Upload Images"}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          className="hidden"
+                          disabled={uploadingFinishId === finishId}
+                          onChange={(e) =>
+                            handleImageUpload(e.target.files, finishId)
+                          }
+                        />
+                      </label>
+                    </div>
+                    {finishImages.length > 0 && (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                        {finishImages.map((img, idx) => (
+                          <div
+                            key={img.id}
+                            className="relative group rounded-lg border border-linen overflow-hidden bg-ivory"
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={img.image_url}
+                              alt={img.alt_text ?? ""}
+                              className="aspect-square w-full object-cover"
+                            />
+                            {img.is_primary && (
+                              <span className="absolute top-2 left-2 px-2 py-0.5 text-[10px] uppercase font-medium rounded bg-antique-gold text-white">
+                                Primary
+                              </span>
+                            )}
+                            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 flex flex-col items-center justify-center gap-1 p-2">
+                              <div className="flex gap-1">
+                                <button
+                                  onClick={() => moveImage(img.id, -1)}
+                                  disabled={idx === 0}
+                                  className="px-2 py-0.5 rounded bg-white/20 text-white text-xs hover:bg-white/40 disabled:opacity-30"
+                                  title="Move up"
+                                >
+                                  ←
+                                </button>
+                                <button
+                                  onClick={() => moveImage(img.id, 1)}
+                                  disabled={idx === finishImages.length - 1}
+                                  className="px-2 py-0.5 rounded bg-white/20 text-white text-xs hover:bg-white/40 disabled:opacity-30"
+                                  title="Move down"
+                                >
+                                  →
+                                </button>
+                              </div>
+                              {!img.is_primary && (
+                                <button
+                                  onClick={() =>
+                                    setPrimaryImage(img.id, img.finish_id)
+                                  }
+                                  className="px-2 py-0.5 rounded bg-white/20 text-white text-[10px] uppercase hover:bg-white/40"
+                                >
+                                  Make Primary
+                                </button>
+                              )}
+                              <button
+                                onClick={() => deleteImage(img.id)}
+                                className="px-2 py-0.5 rounded bg-red-600/80 text-white text-[10px] uppercase hover:bg-red-600"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                            <input
+                              type="text"
+                              defaultValue={img.alt_text ?? ""}
+                              placeholder="Alt text"
+                              onBlur={(e) =>
+                                updateImageAlt(img.id, e.target.value)
+                              }
+                              className="w-full text-[10px] px-2 py-1 border-t border-linen bg-white text-espresso focus:outline-none focus:border-antique-gold"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Variant Management */}
       <div className="mt-8 max-w-4xl">
@@ -645,6 +1014,7 @@ export default function AdminProductEditPage({
                     <th className="px-4 py-3 font-medium text-umber uppercase tracking-wide text-xs">
                       Status
                     </th>
+                    <th className="px-4 py-3 w-12"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -661,22 +1031,31 @@ export default function AdminProductEditPage({
                           className="rounded border-linen"
                         />
                       </td>
-                      <td className="px-4 py-2 text-espresso flex items-center gap-1.5">
-                        {variant.finish?.hex_color && (
-                          <span
-                            className="w-3 h-3 rounded-full inline-block border border-linen"
-                            style={{
-                              backgroundColor: variant.finish.hex_color,
-                            }}
-                          />
-                        )}
-                        {variant.finish?.name ?? "—"}
+                      <td className="px-4 py-2 text-espresso">
+                        <span className="inline-flex items-center gap-1.5">
+                          {variant.finish?.hex_color && (
+                            <span
+                              className="w-3 h-3 rounded-full inline-block border border-linen"
+                              style={{
+                                backgroundColor: variant.finish.hex_color,
+                              }}
+                            />
+                          )}
+                          {variant.finish?.name ?? "—"}
+                        </span>
                       </td>
                       <td className="px-4 py-2 text-umber">
                         {variant.size?.label ?? "—"}
                       </td>
-                      <td className="px-4 py-2 font-mono text-xs text-umber">
-                        {variant.sku}
+                      <td className="px-4 py-2">
+                        <input
+                          type="text"
+                          defaultValue={variant.sku}
+                          onBlur={(e) =>
+                            updateVariantInline(variant.id, "sku", e.target.value)
+                          }
+                          className="w-32 rounded border border-linen bg-ivory px-2 py-1 text-xs font-mono text-espresso focus:border-antique-gold focus:outline-none"
+                        />
                       </td>
                       <td className="px-4 py-2">
                         <input
@@ -725,6 +1104,15 @@ export default function AdminProductEditPage({
                           {variant.active ? "Active" : "Inactive"}
                         </button>
                       </td>
+                      <td className="px-4 py-2 text-right">
+                        <button
+                          onClick={() => deleteVariant(variant.id)}
+                          className="text-xs text-red-600 hover:text-red-800"
+                          title="Delete variant"
+                        >
+                          Delete
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -744,6 +1132,7 @@ export default function AdminProductEditPage({
         <div className="mt-4 max-w-4xl text-xs text-umber">
           Product ID: {product.id} &middot;{" "}
           {product.variants?.length ?? 0} variants &middot;{" "}
+          {images.length} images &middot;{" "}
           Min price:{" "}
           {product.variants?.length
             ? formatPrice(

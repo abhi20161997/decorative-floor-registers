@@ -50,6 +50,10 @@ export default function AdminCustomerDetailPage() {
   const [customer, setCustomer] = useState<CustomerDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [editForm, setEditForm] = useState({ name: "", email: "", phone: "" });
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editSuccess, setEditSuccess] = useState(false);
 
   const fetchCustomer = useCallback(async () => {
     try {
@@ -61,6 +65,11 @@ export default function AdminCustomerDetailPage() {
 
       const data: CustomerDetail = await res.json();
       setCustomer(data);
+      setEditForm({
+        name: data.name ?? "",
+        email: data.email,
+        phone: data.phone ?? "",
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load customer");
     } finally {
@@ -71,6 +80,53 @@ export default function AdminCustomerDetailPage() {
   useEffect(() => {
     fetchCustomer();
   }, [fetchCustomer]);
+
+  const handleEditSave = async () => {
+    setSavingEdit(true);
+    setError(null);
+    setEditSuccess(false);
+    try {
+      const res = await fetch(`/api/admin/customers/${customerId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editForm),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to save");
+      }
+      setEditing(false);
+      setEditSuccess(true);
+      setTimeout(() => setEditSuccess(false), 2500);
+      fetchCustomer();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save");
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleDeleteCustomer = async () => {
+    if (
+      !confirm(
+        "Delete this customer? Their order history will remain, but the customer record will be removed. This cannot be undone."
+      )
+    )
+      return;
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/customers/${customerId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to delete");
+      }
+      router.push("/admin/customers");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete");
+    }
+  };
 
   if (loading) {
     return <div className="p-8 text-center text-umber">Loading...</div>;
@@ -118,57 +174,147 @@ export default function AdminCustomerDetailPage() {
         {/* Customer Info */}
         <div className="space-y-6">
           <div className="bg-white rounded-xl shadow-sm p-6">
-            <h2 className="font-display text-lg text-espresso mb-4">
-              Customer Info
-            </h2>
-            <div className="space-y-3 text-sm">
-              <div>
-                <p className="text-xs text-umber uppercase tracking-wide mb-0.5">
-                  Name
-                </p>
-                <p className="text-espresso font-medium">
-                  {customer.name || "—"}
-                </p>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-display text-lg text-espresso">
+                Customer Info
+              </h2>
+              {!editing && (
+                <button
+                  onClick={() => setEditing(true)}
+                  className="text-xs text-antique-gold hover:underline"
+                >
+                  Edit
+                </button>
+              )}
+            </div>
+            {editSuccess && (
+              <div className="mb-3 rounded bg-green-50 border border-green-200 text-green-700 px-3 py-2 text-xs">
+                Customer saved.
               </div>
-              <div>
-                <p className="text-xs text-umber uppercase tracking-wide mb-0.5">
-                  Email
-                </p>
-                <p className="text-espresso">{customer.email}</p>
+            )}
+            {editing ? (
+              <div className="space-y-3 text-sm">
+                <div>
+                  <label className="block text-xs text-umber uppercase tracking-wide mb-0.5">
+                    Name
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.name}
+                    onChange={(e) =>
+                      setEditForm((p) => ({ ...p, name: e.target.value }))
+                    }
+                    className="w-full rounded-md border border-linen bg-ivory px-3 py-2 text-sm text-espresso focus:border-antique-gold focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-umber uppercase tracking-wide mb-0.5">
+                    Email *
+                  </label>
+                  <input
+                    type="email"
+                    value={editForm.email}
+                    onChange={(e) =>
+                      setEditForm((p) => ({ ...p, email: e.target.value }))
+                    }
+                    required
+                    className="w-full rounded-md border border-linen bg-ivory px-3 py-2 text-sm text-espresso focus:border-antique-gold focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-umber uppercase tracking-wide mb-0.5">
+                    Phone
+                  </label>
+                  <input
+                    type="tel"
+                    value={editForm.phone}
+                    onChange={(e) =>
+                      setEditForm((p) => ({ ...p, phone: e.target.value }))
+                    }
+                    className="w-full rounded-md border border-linen bg-ivory px-3 py-2 text-sm text-espresso focus:border-antique-gold focus:outline-none"
+                  />
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <button
+                    onClick={handleEditSave}
+                    disabled={savingEdit || !editForm.email}
+                    className="flex-1 rounded-md bg-espresso px-3 py-1.5 text-xs font-medium text-white hover:bg-espresso/90 disabled:opacity-50"
+                  >
+                    {savingEdit ? "Saving..." : "Save"}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEditing(false);
+                      setEditForm({
+                        name: customer.name ?? "",
+                        email: customer.email,
+                        phone: customer.phone ?? "",
+                      });
+                    }}
+                    className="rounded-md border border-linen px-3 py-1.5 text-xs text-umber hover:text-espresso"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
-              {customer.phone && (
+            ) : (
+              <div className="space-y-3 text-sm">
                 <div>
                   <p className="text-xs text-umber uppercase tracking-wide mb-0.5">
-                    Phone
+                    Name
                   </p>
-                  <p className="text-espresso">{customer.phone}</p>
+                  <p className="text-espresso font-medium">
+                    {customer.name || "—"}
+                  </p>
                 </div>
-              )}
-              <div>
-                <p className="text-xs text-umber uppercase tracking-wide mb-0.5">
-                  Joined
-                </p>
-                <p className="text-espresso">
-                  {new Date(customer.created_at).toLocaleDateString()}
-                </p>
+                <div>
+                  <p className="text-xs text-umber uppercase tracking-wide mb-0.5">
+                    Email
+                  </p>
+                  <p className="text-espresso">{customer.email}</p>
+                </div>
+                {customer.phone && (
+                  <div>
+                    <p className="text-xs text-umber uppercase tracking-wide mb-0.5">
+                      Phone
+                    </p>
+                    <p className="text-espresso">{customer.phone}</p>
+                  </div>
+                )}
+                <div>
+                  <p className="text-xs text-umber uppercase tracking-wide mb-0.5">
+                    Joined
+                  </p>
+                  <p className="text-espresso">
+                    {new Date(customer.created_at).toLocaleDateString()}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-umber uppercase tracking-wide mb-0.5">
+                    Total Spent
+                  </p>
+                  <p className="text-espresso font-medium">
+                    {formatPrice(totalSpent)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-umber uppercase tracking-wide mb-0.5">
+                    Orders
+                  </p>
+                  <p className="text-espresso font-medium">
+                    {customer.orders.length}
+                  </p>
+                </div>
+                <div className="pt-3 border-t border-linen">
+                  <button
+                    onClick={handleDeleteCustomer}
+                    className="text-xs text-red-600 hover:text-red-800"
+                  >
+                    Delete customer
+                  </button>
+                </div>
               </div>
-              <div>
-                <p className="text-xs text-umber uppercase tracking-wide mb-0.5">
-                  Total Spent
-                </p>
-                <p className="text-espresso font-medium">
-                  {formatPrice(totalSpent)}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-umber uppercase tracking-wide mb-0.5">
-                  Orders
-                </p>
-                <p className="text-espresso font-medium">
-                  {customer.orders.length}
-                </p>
-              </div>
-            </div>
+            )}
           </div>
 
           {/* Addresses */}

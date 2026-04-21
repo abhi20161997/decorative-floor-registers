@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { stripe } from "@/lib/stripe";
 import { resend } from "@/lib/resend";
 import { shippingNotificationEmail } from "@/lib/email-templates";
 
@@ -39,6 +40,56 @@ export async function PATCH(
   const { id } = await params;
   const supabase = createAdminClient();
   const body = await request.json();
+
+  // Handle refund action: requires status transition to cancelled + optional Stripe refund
+  if (body.action === "refund") {
+    const { data: orderRow, error: fetchErr } = await supabase
+      .from("orders")
+      .select("stripe_payment_intent_id, status, total")
+      .eq("id", id)
+      .single();
+    if (fetchErr || !orderRow) {
+      return NextResponse.json(
+        { error: "Order not found" },
+        { status: 404 }
+      );
+    }
+    let stripeRefundId: string | null = null;
+    if (orderRow.stripe_payment_intent_id) {
+      try {
+        const refund = await stripe.refunds.create({
+          payment_intent: orderRow.stripe_payment_intent_id,
+        });
+        stripeRefundId = refund.id;
+      } catch (err) {
+        return NextResponse.json(
+          {
+            error: `Stripe refund failed: ${err instanceof Error ? err.message : "unknown"}`,
+          },
+          { status: 500 }
+        );
+      }
+    }
+    const { data: updated, error: updateErr } = await supabase
+      .from("orders")
+      .update({
+        status: "cancelled",
+        notes: orderRow.stripe_payment_intent_id
+          ? `Refunded via Stripe (${stripeRefundId})`
+          : "Cancelled (no Stripe payment intent on record; no refund issued)",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .select("*, order_items(*)")
+      .single();
+    if (updateErr) {
+      return NextResponse.json(
+        { error: updateErr.message },
+        { status: 500 }
+      );
+    }
+    return NextResponse.json({ ...updated, stripe_refund_id: stripeRefundId });
+  }
 
   const updates: Record<string, unknown> = {
     updated_at: new Date().toISOString(),
@@ -107,4 +158,23 @@ export async function PATCH(
   }
 
   return NextResponse.json(data);
+}
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { error } = await requireAdmin();
+  if (error) return error;
+
+  const { id } = await params;
+  const supabase = createAdminClient();
+
+  const { error: dbError } = await supabase.from("orders").delete().eq("id", id);
+
+  if (dbError) {
+    return NextResponse.json({ error: dbError.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ success: true });
 }

@@ -25,10 +25,13 @@ const STATUS_COLORS: Record<OrderStatus, string> = {
   cancelled: "bg-red-100 text-red-800",
 };
 
+const PER_PAGE = 25;
+
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<OrderRow[] | null>(null);
   const [status, setStatus] = useState<OrderStatus | "">("");
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
   const [error, setError] = useState<string | null>(null);
 
   const fetchOrders = useCallback(async () => {
@@ -121,6 +124,7 @@ export default function AdminOrdersPage() {
         ) : orders.length === 0 ? (
           <div className="p-8 text-center text-umber">No orders found.</div>
         ) : (
+          <>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -149,7 +153,9 @@ export default function AdminOrdersPage() {
                 </tr>
               </thead>
               <tbody>
-                {orders.map((order) => (
+                {orders
+                  .slice((page - 1) * PER_PAGE, page * PER_PAGE)
+                  .map((order) => (
                   <tr
                     key={order.id}
                     className="border-b border-linen/50 hover:bg-ivory/50 transition-colors"
@@ -194,6 +200,32 @@ export default function AdminOrdersPage() {
               </tbody>
             </table>
           </div>
+          {orders.length > PER_PAGE && (
+            <div className="flex items-center justify-between px-4 py-3 border-t border-linen">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="px-3 py-1 rounded-md text-sm border border-linen text-umber hover:bg-linen disabled:opacity-50 transition-colors"
+              >
+                Previous
+              </button>
+              <span className="text-sm text-umber">
+                Page {page} of {Math.ceil(orders.length / PER_PAGE)}
+              </span>
+              <button
+                onClick={() =>
+                  setPage((p) =>
+                    Math.min(Math.ceil(orders.length / PER_PAGE), p + 1)
+                  )
+                }
+                disabled={page >= Math.ceil(orders.length / PER_PAGE)}
+                className="px-3 py-1 rounded-md text-sm border border-linen text-umber hover:bg-linen disabled:opacity-50 transition-colors"
+              >
+                Next
+              </button>
+            </div>
+          )}
+          </>
         )}
       </div>
     </div>

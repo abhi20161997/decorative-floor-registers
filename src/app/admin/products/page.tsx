@@ -12,9 +12,12 @@ type ProductRow = Product & {
   variants: { id: string }[];
 };
 
+const PER_PAGE = 25;
+
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<ProductRow[] | null>(null);
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
   const [error, setError] = useState<string | null>(null);
 
   const fetchProducts = useCallback(async () => {
@@ -57,12 +60,20 @@ export default function AdminProductsPage() {
     <div>
       <div className="flex items-center justify-between mb-8">
         <h1 className="font-display text-display-md text-espresso">Products</h1>
-        <Link
-          href="/admin/products/new"
-          className="px-4 py-2 rounded-lg bg-espresso text-white font-medium hover:bg-espresso/90 transition-colors"
-        >
-          Add Product
-        </Link>
+        <div className="flex gap-3">
+          <a
+            href="/api/admin/export/products"
+            className="px-4 py-2 rounded-lg border border-espresso text-espresso font-medium hover:bg-espresso hover:text-white transition-colors"
+          >
+            Export CSV
+          </a>
+          <Link
+            href="/admin/products/new"
+            className="px-4 py-2 rounded-lg bg-espresso text-white font-medium hover:bg-espresso/90 transition-colors"
+          >
+            Add Product
+          </Link>
+        </div>
       </div>
 
       {/* Search */}
@@ -93,6 +104,7 @@ export default function AdminProductsPage() {
             </Link>
           </div>
         ) : (
+          <>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -121,7 +133,9 @@ export default function AdminProductsPage() {
                 </tr>
               </thead>
               <tbody>
-                {products.map((product) => (
+                {products
+                  .slice((page - 1) * PER_PAGE, page * PER_PAGE)
+                  .map((product) => (
                   <tr
                     key={product.id}
                     className="border-b border-linen/50 hover:bg-ivory/50 transition-colors"
@@ -171,6 +185,32 @@ export default function AdminProductsPage() {
               </tbody>
             </table>
           </div>
+          {products.length > PER_PAGE && (
+            <div className="flex items-center justify-between px-4 py-3 border-t border-linen">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="px-3 py-1 rounded-md text-sm border border-linen text-umber hover:bg-linen disabled:opacity-50 transition-colors"
+              >
+                Previous
+              </button>
+              <span className="text-sm text-umber">
+                Page {page} of {Math.ceil(products.length / PER_PAGE)}
+              </span>
+              <button
+                onClick={() =>
+                  setPage((p) =>
+                    Math.min(Math.ceil(products.length / PER_PAGE), p + 1)
+                  )
+                }
+                disabled={page >= Math.ceil(products.length / PER_PAGE)}
+                className="px-3 py-1 rounded-md text-sm border border-linen text-umber hover:bg-linen disabled:opacity-50 transition-colors"
+              >
+                Next
+              </button>
+            </div>
+          )}
+          </>
         )}
       </div>
     </div>
