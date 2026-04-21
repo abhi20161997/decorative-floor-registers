@@ -2,12 +2,18 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
-import type { User } from "@supabase/supabase-js";
+import type { Session, User } from "@supabase/supabase-js";
 
-// If getUser() hangs longer than this, give up and unblock the UI.
+// If an auth call hangs longer than this, give up and unblock the UI.
 // Without this, a stale cookie or slow network leaves the admin stuck on
 // the "Loading..." screen forever.
 const AUTH_TIMEOUT_MS = 8000;
+
+type AuthState = {
+  user: User | null;
+  isAdmin: boolean;
+  loading: boolean;
+};
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | null> {
   return new Promise((resolve) => {
@@ -37,15 +43,21 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | null> {
 }
 
 export function useAdmin() {
-  const [user, setUser] = useState<User | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [loading, setLoading] = useState(true);
+  // Single state object so user/isAdmin can never drift between renders.
+  // This prevents the "user valid but isAdmin=false stale" flash that
+  // caused AdminGuard to render <AccessDenied/> for a split second on
+  // auth-state-change events (tab focus, token refresh).
+  const [authState, setAuthState] = useState<AuthState>({
+    user: null,
+    isAdmin: false,
+    loading: true,
+  });
   const supabase = createClient();
 
   useEffect(() => {
     let cancelled = false;
 
-    const checkAdminRow = async (userId: string) => {
+    const checkAdminRow = async (userId: string): Promise<boolean> => {
       try {
         const query = supabase
           .from("admin_users")
@@ -59,54 +71,40 @@ export function useAdmin() {
       }
     };
 
-    const checkAuth = async () => {
+    const resolveFromSession = async (session: Session | null) => {
+      const currentUser = session?.user ?? null;
+      // Compute admin status BEFORE committing state so user + isAdmin
+      // always land in the same render.
+      const isAdmin = currentUser ? await checkAdminRow(currentUser.id) : false;
+      if (cancelled) return;
+      setAuthState({ user: currentUser, isAdmin, loading: false });
+    };
+
+    const bootstrap = async () => {
       try {
-        // getSession() reads from local storage synchronously-ish; use it
-        // first as a fast path so first paint isn't blocked on a network call.
-        const sessionResult = await withTimeout(
+        const result = await withTimeout(
           supabase.auth.getSession(),
           AUTH_TIMEOUT_MS
         );
-        const sessionUser = sessionResult?.data?.session?.user ?? null;
-
-        if (sessionUser) {
-          if (cancelled) return;
-          setUser(sessionUser);
-          setIsAdmin(await checkAdminRow(sessionUser.id));
-        } else {
-          // Fallback: hit the server to be safe (handles SSR cookie path)
-          const userResult = await withTimeout(
-            supabase.auth.getUser(),
-            AUTH_TIMEOUT_MS
-          );
-          const currentUser = userResult?.data?.user ?? null;
-          if (cancelled) return;
-          setUser(currentUser);
-          if (currentUser) {
-            setIsAdmin(await checkAdminRow(currentUser.id));
-          }
-        }
+        if (cancelled) return;
+        await resolveFromSession(result?.data?.session ?? null);
       } catch (err) {
         console.error("Admin auth check failed:", err);
-      } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setAuthState({ user: null, isAdmin: false, loading: false });
+        }
       }
     };
 
-    checkAuth();
+    bootstrap();
 
+    // onAuthStateChange fires on SIGNED_IN, SIGNED_OUT, TOKEN_REFRESHED,
+    // USER_UPDATED, and (sometimes) tab focus. We re-resolve the full auth
+    // state each time to keep user + isAdmin in sync.
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      const currentUser = session?.user ?? null;
-      if (cancelled) return;
-      setUser(currentUser);
-      if (currentUser) {
-        setIsAdmin(await checkAdminRow(currentUser.id));
-      } else {
-        setIsAdmin(false);
-      }
-      setLoading(false);
+      await resolveFromSession(session);
     });
 
     return () => {
@@ -128,9 +126,8 @@ export function useAdmin() {
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
-    setUser(null);
-    setIsAdmin(false);
+    setAuthState({ user: null, isAdmin: false, loading: false });
   }, [supabase]);
 
-  return { user, isAdmin, loading, signIn, signOut };
+  return { ...authState, signIn, signOut };
 }
