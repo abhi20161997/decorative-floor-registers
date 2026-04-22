@@ -61,6 +61,9 @@ export default function AdminProductEditPage({
 
   // Image upload
   const [uploadingFinishId, setUploadingFinishId] = useState<string | null>(null);
+  const [uploadSizeByFinish, setUploadSizeByFinish] = useState<
+    Record<string, string>
+  >({}); // "" = All sizes (size_id NULL)
   const [uploadingCad, setUploadingCad] = useState(false);
 
   const [form, setForm] = useState({
@@ -292,6 +295,22 @@ export default function AdminProductEditPage({
 
   // --- Image upload/manage helpers ---
 
+  // Bust ISR cache for this product's PDP so admin image edits show instantly.
+  const revalidateStorefront = useCallback(async () => {
+    if (!product?.slug) return;
+    try {
+      await fetch("/api/admin/revalidate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          paths: [`/shop/${product.slug}`, "/shop"],
+        }),
+      });
+    } catch {
+      // Non-fatal — cache will still refresh via ISR interval.
+    }
+  }, [product?.slug]);
+
   const uploadFile = async (file: File): Promise<string> => {
     const fd = new FormData();
     fd.append("file", file);
@@ -319,9 +338,12 @@ export default function AdminProductEditPage({
           .map((i) => i.display_order)
       );
 
+      const targetSizeId = uploadSizeByFinish[finishId] || null;
+
       const rows: {
         product_id: string;
         finish_id: string;
+        size_id: string | null;
         image_url: string;
         alt_text: string;
         display_order: number;
@@ -334,6 +356,7 @@ export default function AdminProductEditPage({
         rows.push({
           product_id: id,
           finish_id: finishId,
+          size_id: targetSizeId,
           image_url: url,
           alt_text: product?.name ?? file.name,
           display_order: order,
@@ -347,6 +370,7 @@ export default function AdminProductEditPage({
         .insert(rows);
       if (dbError) throw new Error(dbError.message);
       fetchImages();
+      revalidateStorefront();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Image upload failed");
     } finally {
@@ -379,23 +403,40 @@ export default function AdminProductEditPage({
       return;
     }
     fetchImages();
+    revalidateStorefront();
   };
 
-  const setPrimaryImage = async (imageId: string, finishId: string | null) => {
+  const setPrimaryImage = async (
+    imageId: string,
+    finishId: string | null,
+    sizeId: string | null
+  ) => {
     const supabase = createClient();
-    // Unset primary for this finish
-    if (finishId) {
-      await supabase
-        .from("product_images")
-        .update({ is_primary: false })
-        .eq("product_id", id)
-        .eq("finish_id", finishId);
-    }
+    // One primary per (finish, size) scope — otherwise size-specific primaries
+    // would fight with finish-general primaries.
+    let query = supabase
+      .from("product_images")
+      .update({ is_primary: false })
+      .eq("product_id", id);
+    query = finishId ? query.eq("finish_id", finishId) : query.is("finish_id", null);
+    query = sizeId ? query.eq("size_id", sizeId) : query.is("size_id", null);
+    await query;
     await supabase
       .from("product_images")
       .update({ is_primary: true })
       .eq("id", imageId);
     fetchImages();
+    revalidateStorefront();
+  };
+
+  const updateImageSize = async (imageId: string, sizeId: string) => {
+    const supabase = createClient();
+    await supabase
+      .from("product_images")
+      .update({ size_id: sizeId || null })
+      .eq("id", imageId);
+    fetchImages();
+    revalidateStorefront();
   };
 
   const moveImage = async (imageId: string, direction: -1 | 1) => {
@@ -421,6 +462,7 @@ export default function AdminProductEditPage({
         .eq("id", other.id),
     ]);
     fetchImages();
+    revalidateStorefront();
   };
 
   const updateImageAlt = async (imageId: string, alt: string) => {
@@ -430,6 +472,7 @@ export default function AdminProductEditPage({
       .update({ alt_text: alt })
       .eq("id", imageId);
     fetchImages();
+    revalidateStorefront();
   };
 
   if (!product && !error) {
@@ -691,8 +734,10 @@ export default function AdminProductEditPage({
               Product Images
             </h2>
             <p className="text-xs text-umber mt-1">
-              Upload angle shots, detail macros, and room installs per finish.
-              First image per finish becomes the default cart thumbnail.
+              Upload images per finish. To show a different photo when a
+              specific size is selected, set the size on each image (or pick a
+              size before uploading). Leave size as <em>All sizes</em> for the
+              default/finish-wide image.
             </p>
           </div>
 
@@ -725,21 +770,41 @@ export default function AdminProductEditPage({
                           {finishImages.length === 1 ? "image" : "images"})
                         </span>
                       </div>
-                      <label className="cursor-pointer rounded-md border border-espresso bg-white px-3 py-1.5 text-xs text-espresso hover:bg-espresso hover:text-white transition-colors">
-                        {uploadingFinishId === finishId
-                          ? "Uploading..."
-                          : "Upload Images"}
-                        <input
-                          type="file"
-                          accept="image/*"
-                          multiple
-                          className="hidden"
-                          disabled={uploadingFinishId === finishId}
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={uploadSizeByFinish[finishId] ?? ""}
                           onChange={(e) =>
-                            handleImageUpload(e.target.files, finishId)
+                            setUploadSizeByFinish((prev) => ({
+                              ...prev,
+                              [finishId]: e.target.value,
+                            }))
                           }
-                        />
-                      </label>
+                          className="rounded-md border border-linen bg-ivory px-2 py-1.5 text-xs text-espresso focus:border-antique-gold focus:outline-none"
+                          title="Size the uploaded images will be tagged with"
+                        >
+                          <option value="">All sizes</option>
+                          {allSizes.map((s) => (
+                            <option key={s.id} value={s.id}>
+                              {s.label}
+                            </option>
+                          ))}
+                        </select>
+                        <label className="cursor-pointer rounded-md border border-espresso bg-white px-3 py-1.5 text-xs text-espresso hover:bg-espresso hover:text-white transition-colors">
+                          {uploadingFinishId === finishId
+                            ? "Uploading..."
+                            : "Upload Images"}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            className="hidden"
+                            disabled={uploadingFinishId === finishId}
+                            onChange={(e) =>
+                              handleImageUpload(e.target.files, finishId)
+                            }
+                          />
+                        </label>
+                      </div>
                     </div>
                     {finishImages.length > 0 && (
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
@@ -759,6 +824,18 @@ export default function AdminProductEditPage({
                                 Primary
                               </span>
                             )}
+                            <span
+                              className={`absolute top-2 right-2 px-2 py-0.5 text-[10px] uppercase font-medium rounded ${
+                                img.size_id
+                                  ? "bg-espresso text-white"
+                                  : "bg-linen text-espresso"
+                              }`}
+                            >
+                              {img.size_id
+                                ? allSizes.find((s) => s.id === img.size_id)
+                                    ?.label ?? "?"
+                                : "All sizes"}
+                            </span>
                             <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 flex flex-col items-center justify-center gap-1 p-2">
                               <div className="flex gap-1">
                                 <button
@@ -781,7 +858,11 @@ export default function AdminProductEditPage({
                               {!img.is_primary && (
                                 <button
                                   onClick={() =>
-                                    setPrimaryImage(img.id, img.finish_id)
+                                    setPrimaryImage(
+                                      img.id,
+                                      img.finish_id,
+                                      img.size_id
+                                    )
                                   }
                                   className="px-2 py-0.5 rounded bg-white/20 text-white text-[10px] uppercase hover:bg-white/40"
                                 >
@@ -795,6 +876,21 @@ export default function AdminProductEditPage({
                                 Delete
                               </button>
                             </div>
+                            <select
+                              value={img.size_id ?? ""}
+                              onChange={(e) =>
+                                updateImageSize(img.id, e.target.value)
+                              }
+                              className="w-full text-[10px] px-2 py-1 border-t border-linen bg-white text-espresso focus:outline-none focus:border-antique-gold"
+                              title="Which size this image represents"
+                            >
+                              <option value="">All sizes (default)</option>
+                              {allSizes.map((s) => (
+                                <option key={s.id} value={s.id}>
+                                  {s.label}
+                                </option>
+                              ))}
+                            </select>
                             <input
                               type="text"
                               defaultValue={img.alt_text ?? ""}

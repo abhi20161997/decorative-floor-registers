@@ -27,6 +27,8 @@ type SizeOption = {
 type ProductImage = {
   url: string;
   alt: string;
+  finishId: string | null;
+  sizeId: string | null;
 };
 
 type VariantRef = {
@@ -46,7 +48,6 @@ type ProductDetailProps = {
     finishes: FinishOption[];
     sizes: SizeOption[];
     images: ProductImage[];
-    imagesByFinish: Record<string, ProductImage[]>;
     variants: VariantRef[];
     cadUrl: string | null;
   };
@@ -81,11 +82,28 @@ export default function ProductDetail({ product }: ProductDetailProps) {
   const currentPrice =
     selectedVariant?.price ?? selectedSize?.price ?? product.sizes[0]?.price ?? 0;
 
+  // Image fallback chain: most-specific tier with images wins.
+  //   1. finish+size exact    — admin uploaded variant-specific photos
+  //   2. finish-only          — shared across sizes of this finish (most common)
+  //   3. size-only            — size-specific but finish-agnostic
+  //   4. product-wide         — no finish, no size
   const galleryImages = useMemo(() => {
-    if (!selectedFinish) return product.images;
-    const perFinish = product.imagesByFinish[selectedFinish.id];
-    return perFinish && perFinish.length > 0 ? perFinish : product.images;
-  }, [product.images, product.imagesByFinish, selectedFinish]);
+    const fid = selectedFinish?.id ?? null;
+    const sid = selectedSize?.id ?? null;
+
+    const tiers: Array<(img: ProductImage) => boolean> = [
+      (i) => fid !== null && sid !== null && i.finishId === fid && i.sizeId === sid,
+      (i) => fid !== null && i.finishId === fid && i.sizeId === null,
+      (i) => sid !== null && i.finishId === null && i.sizeId === sid,
+      (i) => i.finishId === null && i.sizeId === null,
+    ];
+
+    for (const match of tiers) {
+      const hit = product.images.filter(match);
+      if (hit.length > 0) return hit;
+    }
+    return product.images;
+  }, [product.images, selectedFinish, selectedSize]);
 
   const cartVariant = useMemo(() => {
     if (!selectedVariant || !selectedSize || !selectedFinish) return null;
@@ -113,7 +131,7 @@ export default function ProductDetail({ product }: ProductDetailProps) {
         {/* Left column: Image gallery */}
         <div className="lg:w-1/2">
           <ImageGallery
-            key={selectedFinish?.id ?? "default"}
+            key={`${selectedFinish?.id ?? "f"}|${selectedSize?.id ?? "s"}`}
             images={galleryImages}
             productName={product.name}
             finishGradient={

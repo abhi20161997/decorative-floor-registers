@@ -76,7 +76,8 @@ export type ProductVariant = {
 export type ProductImage = {
   id: string;
   product_id: string;
-  finish_id: string;
+  finish_id: string | null;
+  size_id: string | null;
   image_url: string;
   alt_text: string | null;
   display_order: number;
