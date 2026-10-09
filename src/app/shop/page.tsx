@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 import { createStaticClient } from "@/lib/supabase/static";
 import { getProductImageUrl } from "@/lib/image-urls";
 import ShopContent from "./ShopContent";
@@ -7,11 +8,12 @@ import ShopContent from "./ShopContent";
 // ISR: cache for 60s so pages are served from CDN, not fresh SSR every request
 export const revalidate = 60;
 
-export const metadata: Metadata = {
-  title: "Shop All Registers | Decorative Floor Registers",
+export const metadata: Metadata = pageMetadata({
+  path: "/shop",
+  title: "Shop All Registers",
   description:
     "Browse our collection of decorative floor registers in Art Deco, Contemporary, and Geometrical styles. Available in Antique Brass, Black, and Bronze finishes.",
-};
+});
 
 const demoProducts = [
   {

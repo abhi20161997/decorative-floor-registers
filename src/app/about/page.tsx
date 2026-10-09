@@ -1,20 +1,20 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 import ScrollReveal from "@/components/animations/ScrollReveal";
 import { createStaticClient } from "@/lib/supabase/static";
 
 export const revalidate = 3600;
 
-export async function generateMetadata(): Promise<Metadata> {
-  return {
+export function generateMetadata(): Metadata {
+  return pageMetadata({
+    path: "/about",
     title: "About Us",
     description:
       "Learn about Decorative Floor Register — precision-engineered decorative floor registers crafted from heavy-gauge steel in three curated finishes.",
-    openGraph: {
-      title: "About Us | Decorative Floor Register",
-      description:
-        "Founded with a passion for transforming overlooked details into defining features of your home.",
-    },
-  };
+    socialTitle: "About Us | Decorative Floor Register",
+    socialDescription:
+      "Founded with a passion for transforming overlooked details into defining features of your home.",
+  });
 }
 
 type ContentBlock = {

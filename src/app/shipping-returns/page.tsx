@@ -1,19 +1,19 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 import ScrollReveal from "@/components/animations/ScrollReveal";
 
 export const revalidate = 3600;
 
-export async function generateMetadata(): Promise<Metadata> {
-  return {
+export function generateMetadata(): Metadata {
+  return pageMetadata({
+    path: "/shipping-returns",
     title: "Shipping & Returns",
     description:
       "Free shipping on orders over $50. Standard shipping $5.99. 30-day return policy on unused items. Learn about our shipping rates, delivery times, and return process.",
-    openGraph: {
-      title: "Shipping & Returns | Decorative Floor Register",
-      description:
-        "Free shipping on orders over $50. 30-day return policy. US shipping with 5-7 business day delivery.",
-    },
-  };
+    socialTitle: "Shipping & Returns | Decorative Floor Register",
+    socialDescription:
+      "Free shipping on orders over $50. 30-day return policy. US shipping with 5-7 business day delivery.",
+  });
 }
 
 export default function ShippingReturnsPage() {

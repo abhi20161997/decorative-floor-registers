@@ -1,24 +1,21 @@
 import type { Metadata } from "next";
+import { pageMetadata, SITE_URL } from "@/lib/seo";
 import ScrollReveal from "@/components/animations/ScrollReveal";
 import ApplicationForm from "@/components/careers/ApplicationForm";
 import { EMPLOYER, JOBS } from "@/lib/careers";
 
 export const revalidate = 3600;
 
-const BASE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || "https://decorativefloorregister.com";
-
 const job = JOBS[0];
 
-export async function generateMetadata(): Promise<Metadata> {
-  return {
+export function generateMetadata(): Metadata {
+  return pageMetadata({
+    path: "/careers",
     title: "Careers",
     description: `Join ${EMPLOYER.name}, the Hathras workshop behind Decorative Floor Register. Now hiring: ${job.title} (${job.pay}, on-site in Hathras).`,
-    openGraph: {
-      title: `Careers at ${EMPLOYER.name} | Decorative Floor Register`,
-      description: `${job.title} — ${job.tagline}`,
-    },
-  };
+    socialTitle: `Now hiring: ${job.title} at ${EMPLOYER.name}`,
+    socialDescription: `${job.tagline} ${job.location} · ${job.pay} · ${job.experience} experience. Apply online.`,
+  });
 }
 
 const highlights = [
@@ -54,7 +51,7 @@ function jobPostingJsonLd() {
     hiringOrganization: {
       "@type": "Organization",
       name: EMPLOYER.name,
-      sameAs: BASE_URL,
+      sameAs: SITE_URL,
     },
     jobLocation: {
       "@type": "Place",
@@ -80,7 +77,7 @@ function jobPostingJsonLd() {
       monthsOfExperience: 48,
     },
     directApply: true,
-    url: `${BASE_URL}/careers`,
+    url: `${SITE_URL}/careers`,
   };
 }
 

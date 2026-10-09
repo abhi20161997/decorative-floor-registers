@@ -1,20 +1,20 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 import ScrollReveal from "@/components/animations/ScrollReveal";
 import Accordion from "@/components/ui/Accordion";
 
 export const revalidate = 3600;
 
-export async function generateMetadata(): Promise<Metadata> {
-  return {
+export function generateMetadata(): Metadata {
+  return pageMetadata({
+    path: "/faq",
     title: "Frequently Asked Questions",
     description:
       "Find answers to common questions about our decorative floor registers, sizing, finishes, shipping, returns, and care instructions.",
-    openGraph: {
-      title: "FAQ | Decorative Floor Register",
-      description:
-        "Everything you need to know about our premium decorative floor registers.",
-    },
-  };
+    socialTitle: "FAQ | Decorative Floor Register",
+    socialDescription:
+      "Everything you need to know about our premium decorative floor registers.",
+  });
 }
 
 const faqItems = [

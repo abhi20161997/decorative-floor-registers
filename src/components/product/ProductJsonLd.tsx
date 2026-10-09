@@ -1,3 +1,5 @@
+import { SITE_URL } from "@/lib/seo";
+
 interface ProductJsonLdProps {
   name: string;
   description: string;
@@ -17,8 +19,7 @@ export default function ProductJsonLd({
   sizes,
   inStock,
 }: ProductJsonLdProps) {
-  const baseUrl =
-    process.env.NEXT_PUBLIC_SITE_URL || "https://decorativefloorregister.com";
+  const baseUrl = SITE_URL;
 
   const jsonLd = {
     "@context": "https://schema.org",

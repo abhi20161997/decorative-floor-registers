@@ -1,20 +1,20 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 import ScrollReveal from "@/components/animations/ScrollReveal";
 import ContactForm from "@/components/contact/ContactForm";
 
 export const revalidate = 3600;
 
-export async function generateMetadata(): Promise<Metadata> {
-  return {
+export function generateMetadata(): Metadata {
+  return pageMetadata({
+    path: "/contact",
     title: "Contact Us",
     description:
       "Get in touch with Decorative Floor Register. Questions about sizing, finishes, custom orders, or anything else? We are here to help.",
-    openGraph: {
-      title: "Contact Us | Decorative Floor Register",
-      description:
-        "Have a question? Reach out to our team for sizing help, custom orders, or general inquiries.",
-    },
-  };
+    socialTitle: "Contact Us | Decorative Floor Register",
+    socialDescription:
+      "Have a question? Reach out to our team for sizing help, custom orders, or general inquiries.",
+  });
 }
 
 export default function ContactPage() {

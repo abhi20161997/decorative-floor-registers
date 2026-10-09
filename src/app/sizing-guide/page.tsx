@@ -1,19 +1,19 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 import ScrollReveal from "@/components/animations/ScrollReveal";
 
 export const revalidate = 3600;
 
-export async function generateMetadata(): Promise<Metadata> {
-  return {
+export function generateMetadata(): Metadata {
+  return pageMetadata({
+    path: "/sizing-guide",
     title: "Sizing Guide",
     description:
       "Learn how to measure your floor duct opening and find the right register size. Complete size chart with duct opening and faceplate dimensions.",
-    openGraph: {
-      title: "Sizing Guide | Decorative Floor Register",
-      description:
-        "How to measure for a decorative floor register. Size chart with all 9 available sizes.",
-    },
-  };
+    socialTitle: "Sizing Guide | Decorative Floor Register",
+    socialDescription:
+      "How to measure for a decorative floor register. Size chart with all 9 available sizes.",
+  });
 }
 
 const sizeChart = [

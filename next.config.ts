@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Social card images read these fonts from disk at request time.
+  outputFileTracingIncludes: {
+    "/**/opengraph-image*": ["./src/assets/fonts/**/*"],
+  },
   images: {
     remotePatterns: [
       {

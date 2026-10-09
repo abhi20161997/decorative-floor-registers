@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 import { notFound } from "next/navigation";
 import { createStaticClient } from "@/lib/supabase/static";
 import { getProductGalleryUrls, getProductImageUrl } from "@/lib/image-urls";
@@ -482,26 +483,16 @@ export async function generateMetadata({
     return { title: "Product Not Found" };
   }
 
-  const baseUrl =
-    process.env.NEXT_PUBLIC_SITE_URL || "https://decorativefloorregister.com";
+  const finishNames = product.finishes.map((f) => f.name).join(", ");
   const prices = product.sizes.map((s) => s.price);
   const minPrice = Math.min(...prices);
-  const maxPrice = Math.max(...prices);
-  const finishNames = product.finishes.map((f) => f.name).join(", ");
 
-  return {
-    title: `${product.name}`,
+  return pageMetadata({
+    path: `/shop/${product.slug}`,
+    title: product.name,
     description: `${product.name} in ${finishNames}. From $${minPrice.toFixed(2)}. ${product.description}`,
-    openGraph: {
-      title: `${product.name} | Decorative Floor Register`,
-      description: product.description,
-      url: `${baseUrl}/shop/${product.slug}`,
-      type: "website",
-    },
-    alternates: {
-      canonical: `${baseUrl}/shop/${product.slug}`,
-    },
-  };
+    socialDescription: product.description,
+  });
 }
 
 // --- Page ---
