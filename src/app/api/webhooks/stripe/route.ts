@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { resend } from "@/lib/resend";
+import { ADMIN_EMAIL, EMAIL_FROM, resend } from "@/lib/resend";
 import { orderConfirmationEmail } from "@/lib/email-templates";
 import type Stripe from "stripe";
 
 const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET!;
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@example.com";
-const FROM_EMAIL = "orders@decorativefloorregisters.com";
 
 export async function POST(request: NextRequest) {
   let event: Stripe.Event;
@@ -249,8 +247,9 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   // Send order confirmation email to customer
   try {
     await resend.emails.send({
-      from: FROM_EMAIL,
+      from: EMAIL_FROM.orders,
       to: customerEmail,
+      replyTo: ADMIN_EMAIL,
       subject: `Order Confirmed - #${order.id.slice(0, 8).toUpperCase()}`,
       html: orderConfirmationEmail({
         orderId: order.id,
@@ -271,7 +270,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   // Send admin notification email
   try {
     await resend.emails.send({
-      from: FROM_EMAIL,
+      from: EMAIL_FROM.orders,
       to: ADMIN_EMAIL,
       subject: `New Order #${order.id.slice(0, 8).toUpperCase()} - $${total.toFixed(2)}`,
       html: `

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { resend } from "@/lib/resend";
+import { EMAIL_FROM, resend } from "@/lib/resend";
 import { getJob } from "@/lib/careers";
 
 // Comma-separated list; override with CAREERS_EMAIL in the environment.
@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
     const safeFileName = `${name.replace(/[^a-z0-9]+/gi, "_").slice(0, 60) || "candidate"}_CV.${cvExtension}`;
 
     const { error } = await resend.emails.send({
-      from: "Sanjay Overseas Careers <onboarding@resend.dev>",
+      from: EMAIL_FROM.careers,
       to: CAREERS_EMAILS,
       replyTo: email,
       subject: `Application: ${job.title} — ${name} (${location})`,

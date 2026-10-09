@@ -2,10 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe";
-import { resend } from "@/lib/resend";
+import { ADMIN_EMAIL, EMAIL_FROM, resend } from "@/lib/resend";
 import { shippingNotificationEmail } from "@/lib/email-templates";
-
-const FROM_EMAIL = "orders@decorativefloorregisters.com";
 
 export async function GET(
   _request: NextRequest,
@@ -141,8 +139,9 @@ export async function PATCH(
       }));
 
       await resend.emails.send({
-        from: FROM_EMAIL,
+        from: EMAIL_FROM.orders,
         to: data.customer_email,
+        replyTo: ADMIN_EMAIL,
         subject: `Your Order Has Shipped - #${id.slice(0, 8).toUpperCase()}`,
         html: shippingNotificationEmail({
           orderId: id,

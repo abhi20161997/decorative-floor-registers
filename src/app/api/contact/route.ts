@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { resend } from "@/lib/resend";
-
-const ADMIN_EMAIL =
-  process.env.ADMIN_EMAIL || "deepakbrass@gmail.com";
+import { ADMIN_EMAIL, EMAIL_FROM, resend } from "@/lib/resend";
 
 export async function POST(request: NextRequest) {
   try {
@@ -28,7 +25,7 @@ export async function POST(request: NextRequest) {
 
     // Send email via Resend
     const { error } = await resend.emails.send({
-      from: "Decorative Floor Register <onboarding@resend.dev>",
+      from: EMAIL_FROM.contact,
       to: ADMIN_EMAIL,
       replyTo: email,
       subject: `Contact Form: ${subject}`,
