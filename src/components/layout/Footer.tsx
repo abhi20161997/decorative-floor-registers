@@ -12,6 +12,7 @@ const helpLinks = [
   { href: "/faq", label: "FAQ" },
   { href: "/shipping-returns", label: "Shipping & Returns" },
   { href: "/contact", label: "Contact Us" },
+  { href: "/careers", label: "Careers" },
 ];
 
 export default function Footer() {
